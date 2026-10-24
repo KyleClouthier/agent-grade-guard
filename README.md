@@ -51,6 +51,19 @@ const guard = createGuard({ site: 'example.com', key: KEY, secret: SECRET });
 export default async (request, ctx) => (await guard(request, { ip: ..., waitUntil: ctx?.waitUntil })) || yourHandler(request);
 ```
 
+## The network
+
+Every Guard site feeds one shared store, and the value flows back: your reports say which of this week's attackers also hit other Guard sites and since when, and every catch is sorted as a script, a browser or an AI agent. With your key you can also fetch the shared known-attacker list (addresses that used a stolen secret or the fake admin password on any Guard site in the last 14 days; never a plain file request):
+
+```
+GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&list=1      -> { list: ["203.0.113.5", ...] }
+GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&intel=ip1,ip2 -> where those addresses were seen elsewhere
+```
+
+Use it to refuse logins or form posts from listed addresses. Never apply it to ordinary page views: verified search and AI crawlers are never on it, but a blanket block is still the wrong tool.
+
+The totals are public in the [Agent Attack Index](https://simgen.dev/agent-grade/attack-index/).
+
 ## What is sent to Agent Grade
 
 For each catch: the address, browser string, path, method, time and which decoy was tripped. Requests sent with a decoy key to the decoy AI endpoint also include the model name and the first 1,000 characters of the text sent. Nothing about ordinary visitors. Records are deleted after 90 days. Privacy: https://simgen.dev/privacy/
