@@ -1,0 +1,4 @@
+node_modules/
+test/out-backup.zip
+wrangler.toml
+.wrangler/

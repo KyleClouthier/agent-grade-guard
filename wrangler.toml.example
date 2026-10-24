@@ -1,0 +1,16 @@
+# Copy to wrangler.toml, set your site, then:
+#   npx wrangler secret put GUARD_KEY        (your Agent Grade site key)
+#   npx wrangler secret put GUARD_SECRET     (any long random string)
+#   npx wrangler deploy
+name = "agent-grade-guard"
+main = "src/cloudflare-worker.js"
+compatibility_date = "2026-10-01"
+
+routes = [
+  { pattern = "example.com/*", zone_name = "example.com" },
+  { pattern = "www.example.com/*", zone_name = "example.com" }
+]
+
+[vars]
+SITE = "example.com"
+# AI_NOTE = "off"   # to leave the note for AI agents out of the fakes

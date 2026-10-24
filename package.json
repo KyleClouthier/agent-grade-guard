@@ -1,0 +1,22 @@
+{
+  "name": "agent-grade-guard",
+  "version": "1.0.0",
+  "description": "Decoys that catch attack bots and AI agents on any site: Cloudflare Worker, Next.js middleware, Express. Reports to Agent Grade. Never blocks search engines or AI search bots.",
+  "type": "module",
+  "main": "./src/guard-core.js",
+  "exports": {
+    ".": "./src/guard-core.js",
+    "./express": "./src/express.js",
+    "./cloudflare": "./src/cloudflare-worker.js"
+  },
+  "files": ["src", "README.md", "wrangler.toml.example"],
+  "scripts": {
+    "test": "node test/test-core.mjs"
+  },
+  "keywords": ["security", "honeypot", "ai agents", "bots", "cloudflare", "nextjs", "express"],
+  "author": "Kyle Clouthier, Clouthier Simulation Labs (https://simgen.dev/)",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/KyleClouthier/agent-grade-guard.git" },
+  "homepage": "https://simgen.dev/agent-grade/guard/",
+  "engines": { "node": ">=18" }
+}
