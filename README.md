@@ -35,6 +35,14 @@ AGENT_GRADE_SECRET=any long random string
 
 Only the decoy paths listed in `config.matcher` run through the guard.
 
+## Install
+
+Not on npm yet. Install straight from GitHub, or copy the two files you need:
+
+```
+npm install github:KyleClouthier/agent-grade-guard
+```
+
 ## Express and other Node servers
 
 ```js
