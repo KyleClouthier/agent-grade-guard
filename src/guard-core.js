@@ -14,7 +14,7 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '2.0.0';
+export const VERSION = '2.0.1';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours

@@ -1,20 +1,30 @@
 # AgentDecoy
 
-**Threat intelligence against hostile AI agents, built on a network of decoys.**
+**Full-spectrum protection and threat intelligence against hostile AI agents, built on a network of decoys.**
 
-Hackers now send AI agents to break into websites: they hunt for leaked keys and passwords, try them, and keep going while their owner sleeps. AgentDecoy puts decoys on your site that catch them in the act, tells you who they were and how far they got, and shares every catch with every other protected site, so an attacker caught once is refused everywhere. Free, for Cloudflare Workers, Next.js and Express. The WordPress version is a [plugin](https://simgen.dev/agentdecoy/guard/).
+![AgentDecoy: scan, catch, identify, shut out](https://raw.githubusercontent.com/KyleClouthier/agentdecoy/main/docs/agentdecoy-how-it-works.png)
+
+Hackers now send AI agents to break into websites. An agent asks thousands of sites for the same files, copies any key it finds, tries it, and keeps going while its owner sleeps. On October 24, 2026 one took a decoy AWS key from our own site and used it to try for admin rights 2 hours 39 minutes later. It never got near anything real, and the address was then locked out of every protected site.
+
+That is what this package does for your site. It plants decoys that look exactly like what those agents hunt for, catches them in the act, tells you who they were and how far they got, and shares every catch across the network so an attacker caught once is shut out everywhere. Your real visitors, Google and ChatGPT never see a thing.
 
 ```
 npm install agentdecoy
 ```
 
-Formerly `agent-grade-guard` (same code, new name; the old package points here).
+Free, for Cloudflare Workers (any site on Cloudflare, including Shopify, Wix and Squarespace), Next.js and Express. The WordPress version is a [plugin](https://simgen.dev/agentdecoy/guard/). Formerly `agent-grade-guard` (same code, new name; the old package points here).
+
+**Not sure if you are exposed?** The [free scan](https://simgen.dev/agentdecoy/) shows the ways in a hostile agent would use today. A real result from one of my own sites:
+
+<img src="https://raw.githubusercontent.com/KyleClouthier/agentdecoy/main/docs/scan-result.png" alt="AgentDecoy scan result: threat level Elevated, 2 ways in for a hostile AI agent" width="520">
+
+## What it catches
 
 Attack bots ask for files no person ever opens: `.env`, `.git/config`, `.aws/credentials`, `backup.zip`. Guard answers those requests with believable fakes and reports who asked to your [AgentDecoy](https://simgen.dev/agentdecoy/) account. The fakes carry their own tripwires: a fake API key, a fake AI key, a webhook and an admin password that all report back the moment someone uses them, a note only AI agents read, fake API documentation and a fake MCP server for agents that read first and act second, and a fake admin login that records how the form was filled.
 
-**Crowdsourced:** every site that joins makes every other site safer and smarter. An address that uses a stolen secret on one Guard site (or a stolen decoy cloud key anywhere) is refused on logins and forms across all of them within the hour (blockKnown), and what the network learns about AI search goes into every AgentDecoy report.
+**Crowdsourced:** every site that joins makes every other site safer and smarter. An address that uses a stolen secret on one Guard site (or a stolen decoy cloud key anywhere) is refused on logins and forms across all of them within the hour (blockKnown).
 
-Verified search engines and AI search bots (Google, Bing, Apple, DuckDuckGo, Yandex, Amazon, OpenAI, Perplexity) get a plain 404 and are never blocked. On Cloudflare the platform's verified-bot category is honoured first. Nothing here holds anything real, and nothing is ever refused.
+Verified search engines and crawlers (Google, Bing, Apple, DuckDuckGo, Yandex, Amazon, OpenAI, Perplexity) get a plain 404 and are never blocked. On Cloudflare the platform's verified-bot category is honoured first. Nothing here holds anything real, and ordinary page views are never refused.
 
 ## Get a site key
 

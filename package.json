@@ -1,6 +1,6 @@
 {
   "name": "agentdecoy",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Decoys that catch hostile AI agents and attack bots in the act, with threat intelligence shared across every protected site: Cloudflare Worker, Next.js middleware, Express. Never blocks search engines or AI search bots. Formerly agent-grade-guard.",
   "type": "module",
   "main": "./src/guard-core.js",
