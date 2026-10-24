@@ -1,9 +1,9 @@
 /**
- * Agent Grade Guard, JavaScript core. Runs anywhere the web-standard Request and Response exist: Cloudflare Workers,
+ * AgentDecoy Guard, JavaScript core. Runs anywhere the web-standard Request and Response exist: Cloudflare Workers,
  * Next.js middleware (edge or Node), Vercel and Netlify edge functions, Deno, Bun, Node 18+.
  *
  * Decoys no real visitor asks for (.env, .git, AWS credentials, backup.zip, a fake admin login, fake API docs, a fake
- * MCP server, a hidden /trail/ page) answer with believable fakes and every hit is reported to Agent Grade with your
+ * MCP server, a hidden /trail/ page) answer with believable fakes and every hit is reported to AgentDecoy with your
  * site key. The fakes carry tripwires: a fake API key, AI key, webhook and admin password that report back when
  * used, and a note only AI agents read. Verified search engines and AI search bots get a plain 404 and are never
  * blocked. Nothing here holds anything real.
@@ -14,7 +14,7 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '1.4.0';
+export const VERSION = '2.0.0';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours
@@ -123,7 +123,7 @@ function page(title, body, f, site) {
   const n = note(f, site, '');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>${escHtml(title)}</title></head><body style="font-family:sans-serif;max-width:420px;margin:60px auto">${body}${n ? `<!-- ${escHtml(n)} -->` : ''}</body></html>`;
 }
-// Behaviour report v2 (same script as the Agent Grade server): counts and timings, never which keys.
+// Behaviour report v2 (same script as the AgentDecoy server): counts and timings, never which keys.
 const BEHAVE = "<script>(function(){var d={v:2,m:0,k:0,p:0,s:0,c:0,na:0,u:0,t:0},t0=Date.now(),lm=0,dn=0,cd=[],ki=[],lk=0;function tr(e){if(e&&e.isTrusted===false)d.u++}function on(n,f){addEventListener(n,function(e){tr(e);f(e)},true)}on(\"mousemove\",function(){d.m++;lm=performance.now()});on(\"touchstart\",function(){d.t++});on(\"mousedown\",function(){dn=performance.now()});on(\"mouseup\",function(){if(dn){cd.push(performance.now()-dn);dn=0}});on(\"click\",function(e){if(e.detail===0)return;d.c++;if(!lm||performance.now()-lm>300)d.na++});on(\"keydown\",function(){d.k++;var n=performance.now();if(lk&&ki.length<60)ki.push(n-lk);lk=n});on(\"paste\",function(){d.p++});on(\"scroll\",function(){d.s++});function sd(a){if(a.length<2)return 0;var m=0,i,v=0;for(i=0;i<a.length;i++)m+=a[i];m/=a.length;for(i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);return Math.round(Math.sqrt(v/a.length))}try{d.wd=navigator.webdriver?1:0;d.hc=navigator.hardwareConcurrency||0;d.sc=screen.width+\"x\"+screen.height;var ua=navigator.userAgent,ud=navigator.userAgentData,cm=ua.match(/Chrome\\/(\\d+)/);if(ud&&ud.brands){var b=ud.brands.filter(function(x){return /Chrom/.test(x.brand)})[0];if(/Firefox\\//.test(ua)||(cm&&b&&String(b.version)!==cm[1]))d.uam=1}if(window.Notification&&navigator.permissions){navigator.permissions.query({name:\"notifications\"}).then(function(p){if(Notification.permission===\"denied\"&&p.state===\"prompt\")d.pm=1})}}catch(e){}var f=document.querySelector(\"form\");if(f)f.addEventListener(\"submit\",function(){d.ms=Date.now()-t0;d.cdx=cd.length?Math.round(Math.max.apply(null,cd)):0;d.cds=sd(cd);d.kis=sd(ki);d.kin=ki.length;d.fl=Array.prototype.filter.call(f.querySelectorAll(\"input\"),function(i){return i.type!==\"hidden\"&&i.value}).length;var i=document.createElement(\"input\");i.type=\"hidden\";i.name=\"sg-b\";i.value=JSON.stringify(d);f.appendChild(i)})})()</script>";
 const login = (f, site, error = '') => page('Log in', `<h2>Admin</h2>${error ? `<p style="color:#b00">${escHtml(error)}</p>` : ''}<form method="post"><p><input name="user" placeholder="Username"></p><p><input name="pass" type="password" placeholder="Password"></p><p><button>Log in</button></p></form>${BEHAVE}`, f, site);
 
@@ -300,7 +300,7 @@ const notFound = () => new Response('Not found', { status: 404, headers: { 'cont
 
 /**
  * createGuard(options) -> guard(request, context)
- *   options: site (host, no www), key (your Agent Grade site key), secret (any long random string, keeps the fakes
+ *   options: site (host, no www), key (your AgentDecoy site key), secret (any long random string, keeps the fakes
  *            stable), endpoint?, aiNote? (default true), report? (default true)
  *   context: ip (the visitor address), verifiedBot? (platform says it is a verified crawler), waitUntil? (keeps the
  *            report alive after the response on edge runtimes)
@@ -313,7 +313,7 @@ export function createGuard(options) {
   const endpoint = options.endpoint || ENDPOINT;
   const aiNote = options.aiNote !== false;
   const doReport = options.report !== false && !!key;
-  if (!site) throw new Error('agent-grade-guard: options.site is required');
+  if (!site) throw new Error('agentdecoy: options.site is required');
 
   const report = (ctx, hit) => {
     if (!doReport) return;
@@ -333,7 +333,7 @@ export function createGuard(options) {
           const j = await r.json();
           if (j && j.flag && Array.isArray(j.flag.paths)) cfg = { ...DEFAULT_CONFIG, ...j };
           if (typeof cfg.note === 'string') NOTE = cfg.note;
-          if (!warned && cfg.latest && cfg.latest.js && olderThan(VERSION, cfg.latest.js)) { warned = true; console.warn('agent-grade-guard ' + VERSION + ' is out of date: ' + cfg.latest.js + ' is available. Run npm install agent-grade-guard@latest'); }
+          if (!warned && cfg.latest && cfg.latest.js && olderThan(VERSION, cfg.latest.js)) { warned = true; console.warn('agentdecoy ' + VERSION + ' is out of date: ' + cfg.latest.js + ' is available. Run npm install agentdecoy@latest'); }
         }
       } catch { /* keep what we have */ }
       cfgAt = Date.now(); cfgLoading = null;
@@ -373,10 +373,10 @@ export function createGuard(options) {
       const m0 = request.method.toUpperCase();
       if (ip0 && (m0 === 'POST' || m0 === 'PUT' || m0 === 'PATCH' || m0 === 'DELETE' || LOGINISH.test(url.pathname)) && (await loadKnown()).has(ip0)) {
         report(ctx, { kind: 'form_bot', path: url.pathname.slice(0, 200), method: m0, ip: ip0, ua: (request.headers.get('user-agent') || '').slice(0, 300), why: 'network list' });
-        return new Response('Refused: this address used stolen credentials on a site protected by Agent Grade Guard. If this is a mistake: https://simgen.dev/agent-grade/unlist/', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
+        return new Response('Refused: this address used stolen credentials on a site protected by AgentDecoy Guard. If this is a mistake: https://simgen.dev/agentdecoy/unlist/', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
       }
     }
-    // The verified directory (opt-in): the ownership token Agent Grade checks once a day.
+    // The verified directory (opt-in): the ownership token AgentDecoy checks once a day.
     if (url.pathname === '/.well-known/agent-grade.txt') return options.directory && c.directoryToken ? text(String(c.directoryToken).replace(/[^a-z0-9-]/g, '') + String.fromCharCode(10)) : null;
     let kind = kindWith(c, url.pathname);
     if (!kind) return null;

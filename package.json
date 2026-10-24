@@ -1,7 +1,7 @@
 {
-  "name": "agent-grade-guard",
-  "version": "1.4.0",
-  "description": "Crowdsourced decoys that catch attack bots and AI agents on any site, and lock them out of every protected site: Cloudflare Worker, Next.js middleware, Express. Never blocks search engines or AI search bots.",
+  "name": "agentdecoy",
+  "version": "2.0.0",
+  "description": "Decoys that catch hostile AI agents and attack bots in the act, with threat intelligence shared across every protected site: Cloudflare Worker, Next.js middleware, Express. Never blocks search engines or AI search bots. Formerly agent-grade-guard.",
   "type": "module",
   "main": "./src/guard-core.js",
   "exports": {
@@ -30,15 +30,19 @@
     "ai-agents",
     "prompt-injection",
     "llms-txt",
-    "cloudflare-workers"
+    "cloudflare-workers",
+    "agentdecoy",
+    "ai-agent-security",
+    "threat-intelligence",
+    "deception"
   ],
   "author": "Kyle Clouthier, Clouthier Simulation Labs (https://simgen.dev/)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KyleClouthier/agent-grade-guard.git"
+    "url": "git+https://github.com/KyleClouthier/agentdecoy.git"
   },
-  "homepage": "https://simgen.dev/agent-grade/guard/",
+  "homepage": "https://simgen.dev/agentdecoy/guard/",
   "engines": {
     "node": ">=18"
   }

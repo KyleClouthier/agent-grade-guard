@@ -1,9 +1,9 @@
 /**
- * Agent Grade Guard as a Cloudflare Worker. Put it in front of any site on Cloudflare: decoy paths are answered by the
+ * AgentDecoy Guard as a Cloudflare Worker. Put it in front of any site on Cloudflare: decoy paths are answered by the
  * worker, everything else goes to your origin untouched.
  *
  *   wrangler.toml:  routes = [{ pattern = "example.com/*", zone_name = "example.com" }]
- *   wrangler secret put GUARD_KEY      (your Agent Grade site key, from simgen.dev/agent-grade/account or /guard)
+ *   wrangler secret put GUARD_KEY      (your AgentDecoy site key, from simgen.dev/agentdecoy/account or /guard)
  *   wrangler secret put GUARD_SECRET   (any long random string; keeps the fakes stable per visitor per day)
  *   [vars] SITE = "example.com"
  *

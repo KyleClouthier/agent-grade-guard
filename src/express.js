@@ -1,7 +1,7 @@
 /**
- * Agent Grade Guard for Express, Fastify (via middie) or any Node 18+ server that exposes req/res.
+ * AgentDecoy Guard for Express, Fastify (via middie) or any Node 18+ server that exposes req/res.
  *
- *   import { agentGradeGuard } from 'agent-grade-guard/express';
+ *   import { agentGradeGuard } from 'agentdecoy/express';
  *   app.use(agentGradeGuard({ site: 'example.com', key: 'YOUR_SITE_KEY', secret: 'any long random string' }));
  *
  * Put it before your routes and before any static handler. It answers decoy paths and calls next() for everything
