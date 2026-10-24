@@ -9,14 +9,31 @@
     "./express": "./src/express.js",
     "./cloudflare": "./src/cloudflare-worker.js"
   },
-  "files": ["src", "README.md", "wrangler.toml.example"],
+  "files": [
+    "src",
+    "README.md",
+    "wrangler.toml.example"
+  ],
   "scripts": {
     "test": "node test/test-core.mjs"
   },
-  "keywords": ["security", "honeypot", "ai agents", "bots", "cloudflare", "nextjs", "express"],
+  "keywords": [
+    "security",
+    "honeypot",
+    "ai agents",
+    "bots",
+    "cloudflare",
+    "nextjs",
+    "express"
+  ],
   "author": "Kyle Clouthier, Clouthier Simulation Labs (https://simgen.dev/)",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/KyleClouthier/agent-grade-guard.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KyleClouthier/agent-grade-guard.git"
+  },
   "homepage": "https://simgen.dev/agent-grade/guard/",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }
