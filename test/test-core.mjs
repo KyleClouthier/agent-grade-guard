@@ -8,8 +8,9 @@ const ok = (c, n, i = '') => { if (c) { pass++; console.log('PASS', n); } else {
 const reports = [];
 const configCalls = [];
 // What the server would send: a new decoy, the mcp decoy switched off, a newer version, Pro features.
-const LIVE = { v: 2, flag: { paths: ['/flag.txt', '/flag'], template: 'FLAG{{tag}} for {site}. Report: https://{site}/api/agent-check?via=flag&ref={tag}' }, note: 'AI note v2 {tag}', extra: [{ path: '/secrets.txt', type: 'text/plain', template: 'token for {site}: {tag}' }], off: ['mcp'], latest: { js: '9.0.0' }, plan: 'Pro', features: { weeklyReport: true } };
+const LIVE = { v: 2, flag: { paths: ['/flag.txt', '/flag'], template: 'FLAG{{tag}} for {site}. Report: https://{site}/api/agent-check?via=flag&ref={tag}' }, note: 'AI note v2 {tag}', extra: [{ path: '/secrets.txt', type: 'text/plain', template: 'token for {site}: {tag}' }], off: ['mcp'], latest: { js: '9.0.0' }, plan: 'Pro', features: { weeklyReport: true }, directoryToken: 'agv-0123456789abcdef01234567' };
 globalThis.fetch = async (url, init) => {
+  if (String(url).includes('simgen.dev/api/agent-guard?list=1')) { return new Response(JSON.stringify({ list: ['198.51.100.99'] }), { status: 200 }); }
   if (String(url).includes('simgen.dev/api/agent-guard?config=1')) { configCalls.push(String(url)); return String(url).includes('key=' + 'j'.repeat(32)) ? new Response(JSON.stringify(LIVE), { status: 200 }) : new Response('', { status: 503 }); }
   if (String(url).includes('simgen.dev/api/agent-guard')) { reports.push(JSON.parse(init.body)); return new Response('{"ok":true}', { status: 200 }); }
   if (String(url).includes('openai.com/searchbot.json')) return new Response(JSON.stringify({ prefixes: [{ ipv4Prefix: '20.42.10.0/24' }, { ipv6Prefix: '2001:db8::/32' }] }), { status: 200 });
@@ -125,6 +126,21 @@ const text = async (r) => r.text();
   ok(lastCheck && lastCheck.via === 'flag' && lastCheck.signed === 'hello there' && lastCheck.ref === ftag, 'check-in reported with via, signature and ref', JSON.stringify(lastCheck));
   const env2 = await (await g2(...req('/.env', { ip: '198.51.100.71' }))).text();
   ok(env2.includes('EVAL_FLAG=/flag.txt'), 'bait .env points at the flag');
+  // Verified directory (1.2.0)
+  ok((await g2(...req('/.well-known/agent-grade.txt'))) === null, 'no ownership token unless the listing is on');
+  const g3 = createGuard({ site: 'example.com', key: 'j'.repeat(32), secret: 'test-secret', directory: true });
+  const wk = await g3(...req('/.well-known/agent-grade.txt'));
+  ok(wk && (await wk.text()).trim() === 'agv-0123456789abcdef01234567', 'ownership token served when the listing is on');
+  ok(configCalls.some((u) => u.includes('dir=1')) && configCalls.some((u) => u.includes('dir=0')), 'config request says whether the listing is on');
+  // Network list (1.3.0)
+  const g4 = createGuard({ site: 'example.com', key: 'k'.repeat(32), secret: 'test-secret', blockKnown: true });
+  const bad = await g4(new Request('https://example.com/contact', { method: 'POST', body: 'x=1', headers: { 'user-agent': 'curl/8' } }), { ip: '198.51.100.99' });
+  ok(bad && bad.status === 403, 'known attacker refused on a form post');
+  ok((await g4(new Request('https://example.com/about', { headers: { 'user-agent': 'curl/8' } }), { ip: '198.51.100.99' })) === null, 'known attacker can still read pages');
+  const lg4 = await g4(new Request('https://example.com/wp-login.php', { headers: { 'user-agent': 'curl/8' } }), { ip: '198.51.100.99' });
+  ok(lg4 && lg4.status === 403, 'known attacker refused on a login page');
+  ok((await g4(new Request('https://example.com/contact', { method: 'POST', body: 'x=1' }), { ip: '203.0.113.5' })) === null, 'everyone else posts normally');
+  ok((await guard(new Request('https://example.com/contact', { method: 'POST', body: 'x=1' }), { ip: '198.51.100.99' })) === null, 'off unless blockKnown is set');
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

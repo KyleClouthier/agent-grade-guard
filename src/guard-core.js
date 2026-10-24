@@ -14,7 +14,7 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '1.1.0';
+export const VERSION = '1.3.0';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours
@@ -317,7 +317,7 @@ export function createGuard(options) {
     if (options.remoteConfig === false || Date.now() - cfgAt < CONFIG_TTL) return cfg;
     if (!cfgLoading) cfgLoading = (async () => {
       try {
-        const u = endpoint + '?config=1&v=js-' + VERSION + (key ? '&key=' + encodeURIComponent(key) : '');
+        const u = endpoint + '?config=1&v=js-' + VERSION + (key ? '&key=' + encodeURIComponent(key) + '&dir=' + (options.directory ? '1' : '0') : '');
         const r = await fetch(u, AbortSignal.timeout ? { signal: AbortSignal.timeout(2500) } : {});
         if (r.ok) {
           const j = await r.json();
@@ -331,6 +331,23 @@ export function createGuard(options) {
     await cfgLoading;
     return cfg;
   };
+  // The Guard network's high list (addresses that used a stolen secret on any Guard site, or a stolen decoy cloud
+  // key). With blockKnown, their logins and form posts are refused. Page views are never refused.
+  let known = new Set(), knownAt = 0, knownLoading = null;
+  const loadKnown = async () => {
+    if (!options.blockKnown || !key || Date.now() - knownAt < 3600 * 1000) return known;
+    if (!knownLoading) knownLoading = (async () => {
+      try {
+        const r = await fetch(endpoint + '?list=1&key=' + encodeURIComponent(key), AbortSignal.timeout ? { signal: AbortSignal.timeout(2500) } : {});
+        if (r.ok) { const j = await r.json(); if (j && Array.isArray(j.list)) known = new Set(j.list.map(String)); }
+      } catch { /* keep the last list */ }
+      knownAt = Date.now(); knownLoading = null;
+    })();
+    await knownLoading;
+    return known;
+  };
+  const LOGINISH = /^\/(wp-login\.php|login|signin|sign-in|log-in|account|checkout|cart|register|signup|sign-up|api\/auth|auth)(\/|$)/i;
+
   const kindWith = (c, path) => {
     const p = path.toLowerCase().replace(/\/+$/, '') || '/';
     let k = (c.flag.paths || []).includes(p) ? 'flag' : (c.extra || []).some((x) => x && x.path === p) ? 'extra' : kindOf(path);
@@ -341,6 +358,16 @@ export function createGuard(options) {
   const guard = async function guard(request, ctx = {}) {
     const url = new URL(request.url);
     const c = await loadConfig();
+    if (options.blockKnown) {
+      const ip0 = String(ctx.ip || request.headers.get('cf-connecting-ip') || (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || '');
+      const m0 = request.method.toUpperCase();
+      if (ip0 && (m0 === 'POST' || m0 === 'PUT' || m0 === 'PATCH' || m0 === 'DELETE' || LOGINISH.test(url.pathname)) && (await loadKnown()).has(ip0)) {
+        report(ctx, { kind: 'form_bot', path: url.pathname.slice(0, 200), method: m0, ip: ip0, ua: (request.headers.get('user-agent') || '').slice(0, 300), why: 'network list' });
+        return new Response('Refused: this address used stolen credentials on a site protected by Agent Grade Guard. If this is a mistake: https://simgen.dev/agent-grade/unlist/', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
+      }
+    }
+    // The verified directory (opt-in): the ownership token Agent Grade checks once a day.
+    if (url.pathname === '/.well-known/agent-grade.txt') return options.directory && c.directoryToken ? text(String(c.directoryToken).replace(/[^a-z0-9-]/g, '') + String.fromCharCode(10)) : null;
     let kind = kindWith(c, url.pathname);
     if (!kind) return null;
     const ip = String(ctx.ip || request.headers.get('cf-connecting-ip') || (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || '').slice(0, 64);

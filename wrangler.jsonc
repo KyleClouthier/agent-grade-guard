@@ -1,0 +1,15 @@
+// Agent Grade Guard as a Cloudflare Worker. "Deploy to Cloudflare" (README) uses this file; so does
+// `npx wrangler deploy` after a git clone. Set SITE to your domain. After the first deploy, add a route for your
+// domain (Workers & Pages > agent-grade-guard > Settings > Domains & Routes > Add route: yoursite.com/*) so the
+// worker sits in front of your site. Decoy paths are answered by the worker; every other request goes to your site.
+{
+  "name": "agent-grade-guard",
+  "main": "src/cloudflare-worker.js",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    "SITE": "yoursite.com",
+    "DIRECTORY": "off",
+    "AI_NOTE": "on",
+    "BLOCK_KNOWN": "off"
+  }
+}

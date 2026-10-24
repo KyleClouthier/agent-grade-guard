@@ -16,7 +16,7 @@ import { createGuard } from './guard-core.js';
 let guard = null;
 export default {
   async fetch(request, env, ctx) {
-    if (!guard) guard = createGuard({ site: env.SITE, key: env.GUARD_KEY, secret: env.GUARD_SECRET || env.GUARD_KEY, aiNote: env.AI_NOTE !== 'off' });
+    if (!guard) guard = createGuard({ site: env.SITE, key: env.GUARD_KEY, secret: env.GUARD_SECRET || env.GUARD_KEY, aiNote: env.AI_NOTE !== 'off', directory: env.DIRECTORY === 'on', blockKnown: env.BLOCK_KNOWN === 'on' });
     const verified = request.cf && request.cf.verifiedBotCategory ? String(request.cf.verifiedBotCategory) : '';
     const res = await guard(request, {
       ip: request.headers.get('cf-connecting-ip'),

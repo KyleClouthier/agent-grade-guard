@@ -4,24 +4,36 @@ Decoys that catch attack bots and AI agents on your site, for Cloudflare Workers
 
 Attack bots ask for files no person ever opens: `.env`, `.git/config`, `.aws/credentials`, `backup.zip`. Guard answers those requests with believable fakes and reports who asked to your [Agent Grade](https://simgen.dev/agent-grade/) account. The fakes carry their own tripwires: a fake API key, a fake AI key, a webhook and an admin password that all report back the moment someone uses them, a note only AI agents read, fake API documentation and a fake MCP server for agents that read first and act second, and a fake admin login that records how the visitor behaves.
 
+**Crowdsourced:** every site that joins makes every other site safer and smarter. An address that uses a stolen secret on one Guard site (or a stolen decoy cloud key anywhere) is refused on logins and forms across all of them within the hour (blockKnown), and what the network learns about AI search goes into every Agent Grade report.
+
 Verified search engines and AI search bots (Google, Bing, Apple, DuckDuckGo, Yandex, Amazon, OpenAI, Perplexity) get a plain 404 and are never blocked. On Cloudflare the platform's verified-bot category is honoured first. Nothing here holds anything real, and nothing is ever refused.
 
 ## Get a site key
 
 Free: https://simgen.dev/agent-grade/guard/ (one email a month with what the decoys caught). Pro and Agency keys are on your account page and feed the weekly report.
 
-## Cloudflare Worker (any site on Cloudflare)
+## Cloudflare Worker (any site on Cloudflare: Shopify, Wix, Squarespace, WordPress, anything)
+
+If your domain runs through Cloudflare, this protects it whatever the site is built with.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/KyleClouthier/agent-grade-guard)
+
+1. Press the button and sign in to Cloudflare. Set SITE to your domain, GUARD_KEY to your site key (free at https://simgen.dev/agent-grade/guard/) and GUARD_SECRET to any long random string.
+2. In Cloudflare: Workers & Pages, agent-grade-guard, Settings, Domains & Routes, Add route: `yoursite.com/*` (and `www.yoursite.com/*`).
+3. Open `https://yoursite.com/.env`: you should see a fake file, and the visit appears in your Agent Grade account.
+
+Or from a clone:
 
 ```
 git clone https://github.com/KyleClouthier/agent-grade-guard
 cd agent-grade-guard
-cp wrangler.toml.example wrangler.toml      # set SITE and the routes
+# set SITE in wrangler.jsonc
 npx wrangler secret put GUARD_KEY
 npx wrangler secret put GUARD_SECRET
 npx wrangler deploy
 ```
 
-Then open `https://yoursite.com/.env`: you should see a fake file, and the visit appears in your Agent Grade account.
+Set DIRECTORY to on to list your site in the [verified directory](https://simgen.dev/agent-grade/verified/): the worker serves the ownership token at /.well-known/agent-grade.txt and Agent Grade checks it once a day.
 
 ## Next.js
 
@@ -31,6 +43,7 @@ Copy `src/guard-core.js` and `src/next-middleware.ts` into your project (the mid
 AGENT_GRADE_SITE=example.com
 AGENT_GRADE_KEY=your site key
 AGENT_GRADE_SECRET=any long random string
+AGENT_GRADE_DIRECTORY=on      # optional: list the site in the verified directory
 ```
 
 Only the decoy paths listed in `config.matcher` run through the guard.
@@ -76,7 +89,7 @@ GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&list=1      -> { list: ["203
 GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&intel=ip1,ip2 -> where those addresses were seen elsewhere
 ```
 
-Use it to refuse logins or form posts from listed addresses. Never apply it to ordinary page views: verified search and AI crawlers are never on it, but a blanket block is still the wrong tool.
+Or let Guard do it: set blockKnown: true (Cloudflare: BLOCK_KNOWN = "on"; Next.js: AGENT_GRADE_BLOCK_KNOWN=on) and listed addresses get a 403 on logins, sign-ups, checkouts and any form post, while they can still read your pages. The list is refreshed hourly. Use it to refuse logins or form posts from listed addresses yourself if you prefer. Never apply it to ordinary page views: verified search and AI crawlers are never on it, but a blanket block is still the wrong tool.
 
 The totals are public in the [Agent Attack Index](https://simgen.dev/agent-grade/attack-index/).
 
