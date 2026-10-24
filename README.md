@@ -37,11 +37,11 @@ Only the decoy paths listed in `config.matcher` run through the guard.
 
 ## Install
 
-Not on npm yet. Install straight from GitHub, or copy the two files you need:
+```
+npm install agent-grade-guard
+```
 
-```
-npm install github:KyleClouthier/agent-grade-guard
-```
+[npm](https://www.npmjs.com/package/agent-grade-guard). Or copy the two files you need from `src/`.
 
 ## Express and other Node servers
 
@@ -54,7 +54,7 @@ app.use(agentGradeGuard({ site: 'example.com', key: process.env.AGENT_GRADE_KEY,
 ## Anything else with a fetch handler (Deno, Bun, Vercel and Netlify edge functions)
 
 ```js
-import { createGuard } from './src/guard-core.js';
+import { createGuard } from 'agent-grade-guard';
 const guard = createGuard({ site: 'example.com', key: KEY, secret: SECRET });
 export default async (request, ctx) => (await guard(request, { ip: ..., waitUntil: ctx?.waitUntil })) || yourHandler(request);
 ```
