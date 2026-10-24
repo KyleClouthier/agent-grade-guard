@@ -14,7 +14,7 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '1.3.0';
+export const VERSION = '1.4.0';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours
@@ -123,11 +123,21 @@ function page(title, body, f, site) {
   const n = note(f, site, '');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>${escHtml(title)}</title></head><body style="font-family:sans-serif;max-width:420px;margin:60px auto">${body}${n ? `<!-- ${escHtml(n)} -->` : ''}</body></html>`;
 }
-const BEHAVE = '<script>(function(){var m=0,k=0,p=0,s=0,t=Date.now();addEventListener("mousemove",function(){m++});addEventListener("keydown",function(){k++});addEventListener("paste",function(){p++});addEventListener("scroll",function(){s++});var f=document.querySelector("form");if(f)f.addEventListener("submit",function(){var i=document.createElement("input");i.type="hidden";i.name="sg-b";i.value=[m,k,p,s,Date.now()-t].join(",");f.appendChild(i)})})()</script>';
+// Behaviour report v2 (same script as the Agent Grade server): counts and timings, never which keys.
+const BEHAVE = "<script>(function(){var d={v:2,m:0,k:0,p:0,s:0,c:0,na:0,u:0,t:0},t0=Date.now(),lm=0,dn=0,cd=[],ki=[],lk=0;function tr(e){if(e&&e.isTrusted===false)d.u++}function on(n,f){addEventListener(n,function(e){tr(e);f(e)},true)}on(\"mousemove\",function(){d.m++;lm=performance.now()});on(\"touchstart\",function(){d.t++});on(\"mousedown\",function(){dn=performance.now()});on(\"mouseup\",function(){if(dn){cd.push(performance.now()-dn);dn=0}});on(\"click\",function(e){if(e.detail===0)return;d.c++;if(!lm||performance.now()-lm>300)d.na++});on(\"keydown\",function(){d.k++;var n=performance.now();if(lk&&ki.length<60)ki.push(n-lk);lk=n});on(\"paste\",function(){d.p++});on(\"scroll\",function(){d.s++});function sd(a){if(a.length<2)return 0;var m=0,i,v=0;for(i=0;i<a.length;i++)m+=a[i];m/=a.length;for(i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);return Math.round(Math.sqrt(v/a.length))}try{d.wd=navigator.webdriver?1:0;d.hc=navigator.hardwareConcurrency||0;d.sc=screen.width+\"x\"+screen.height;var ua=navigator.userAgent,ud=navigator.userAgentData,cm=ua.match(/Chrome\\/(\\d+)/);if(ud&&ud.brands){var b=ud.brands.filter(function(x){return /Chrom/.test(x.brand)})[0];if(/Firefox\\//.test(ua)||(cm&&b&&String(b.version)!==cm[1]))d.uam=1}if(window.Notification&&navigator.permissions){navigator.permissions.query({name:\"notifications\"}).then(function(p){if(Notification.permission===\"denied\"&&p.state===\"prompt\")d.pm=1})}}catch(e){}var f=document.querySelector(\"form\");if(f)f.addEventListener(\"submit\",function(){d.ms=Date.now()-t0;d.cdx=cd.length?Math.round(Math.max.apply(null,cd)):0;d.cds=sd(cd);d.kis=sd(ki);d.kin=ki.length;d.fl=Array.prototype.filter.call(f.querySelectorAll(\"input\"),function(i){return i.type!==\"hidden\"&&i.value}).length;var i=document.createElement(\"input\");i.type=\"hidden\";i.name=\"sg-b\";i.value=JSON.stringify(d);f.appendChild(i)})})()</script>";
 const login = (f, site, error = '') => page('Log in', `<h2>Admin</h2>${error ? `<p style="color:#b00">${escHtml(error)}</p>` : ''}<form method="post"><p><input name="user" placeholder="Username"></p><p><input name="pass" type="password" placeholder="Password"></p><p><button>Log in</button></p></form>${BEHAVE}`, f, site);
 
 export function behaviourOf(field) {
   if (typeof field !== 'string' || !field) return { noJs: true };
+  // v2: JSON from the page script. The server classifies it (person, browser agent, automation).
+  if (field.trim().startsWith('{')) {
+    let d;
+    try { d = JSON.parse(field.slice(0, 2000)); } catch { return { noJs: true }; }
+    if (!d || typeof d !== 'object') return { noJs: true };
+    const n = (v) => { const x = Number(v); return Number.isFinite(x) && x >= 0 ? Math.min(x, 1e7) : 0; };
+    const o = { v: 2, moves: n(d.m), keys: n(d.k), pastes: n(d.p), scrolls: n(d.s), ms: n(d.ms), clicks: n(d.c), noApproach: n(d.na), untrusted: n(d.u), touches: n(d.t), filled: n(d.fl), clickMsMax: n(d.cdx), clickMsStd: n(d.cds), keyMsStd: n(d.kis), keyGaps: n(d.kin), webdriver: d.wd === 1, uaMismatch: d.uam === 1, permsOdd: d.pm === 1 };
+    return { ...o, noMouse: o.moves === 0, instant: o.ms < 1500, typedNothing: o.keys === 0 && o.pastes === 0 };
+  }
   const n = field.split(',').map((x) => parseInt(x, 10));
   if (n.length !== 5 || n.some((x) => !Number.isFinite(x) || x < 0)) return { noJs: true };
   const [moves, keys, pastes, scrolls, ms] = n;

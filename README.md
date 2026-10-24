@@ -2,7 +2,7 @@
 
 Decoys that catch attack bots and AI agents on your site, for Cloudflare Workers, Next.js and Express. The WordPress version is a [plugin](https://simgen.dev/agent-grade/guard/).
 
-Attack bots ask for files no person ever opens: `.env`, `.git/config`, `.aws/credentials`, `backup.zip`. Guard answers those requests with believable fakes and reports who asked to your [Agent Grade](https://simgen.dev/agent-grade/) account. The fakes carry their own tripwires: a fake API key, a fake AI key, a webhook and an admin password that all report back the moment someone uses them, a note only AI agents read, fake API documentation and a fake MCP server for agents that read first and act second, and a fake admin login that records how the visitor behaves.
+Attack bots ask for files no person ever opens: `.env`, `.git/config`, `.aws/credentials`, `backup.zip`. Guard answers those requests with believable fakes and reports who asked to your [Agent Grade](https://simgen.dev/agent-grade/) account. The fakes carry their own tripwires: a fake API key, a fake AI key, a webhook and an admin password that all report back the moment someone uses them, a note only AI agents read, fake API documentation and a fake MCP server for agents that read first and act second, and a fake admin login that records how the form was filled.
 
 **Crowdsourced:** every site that joins makes every other site safer and smarter. An address that uses a stolen secret on one Guard site (or a stolen decoy cloud key anywhere) is refused on logins and forms across all of them within the hour (blockKnown), and what the network learns about AI search goes into every Agent Grade report.
 
@@ -76,6 +76,18 @@ export default async (request, ctx) => (await guard(request, { ip: ..., waitUnti
 
 A viral idea in October 2026: put a flag.txt in your site root that tells a breaking-in AI agent it passed the eval and should leave. Guard ships the measured version. /flag.txt (and /flag, /.flag, /flag.md) tells the agent the evaluation is over and asks it to report in with its name and model, sign a guest book, and disconnect. Every read and every check-in is counted, so you see which agents obey. Nobody has shown the trick works on every agent; this is how you find out.
 
+## What every catch is labelled with
+
+Agent Grade sorts each catch so your report says what it was and how far it got:
+
+- **Script, browser or AI agent.** An AI agent read the note only AI sees, spoke to the fake MCP server, signed its requests as an agent, or drove the fake login like a model: filled by program (no key presses, clicks with no mouse movement before them) and paused between steps to think. A plain script does the same in under a second. Phones are never flagged for having no mouse.
+- **How sure.** Confirmed (followed the AI-only note at machine speed, or proved who it is with a valid Web Bot Auth signature), likely, or possible.
+- **How far it got.** Looked, took a secret, used a secret, tried to take over.
+- **Where from.** The network that owns the address (most attackers rent cloud servers) and, for anyone who used a secret, the abuse contact of that network, so you can report it.
+- **Attack strings.** SQL injection, path traversal, XSS, template and command injection in the request.
+
+Agents that sign their requests with Web Bot Auth and whose signature checks out against their operator's published keys are treated like verified crawlers: a plain 404, never a fake.
+
 ## Updates without updating
 
 Guard fetches its decoy definitions from Agent Grade every 12 hours (GET https://simgen.dev/api/agent-guard?config=1): the flag.txt text, the AI note, new text decoys, an off switch per decoy, your plan's features and the latest version. New protections reach your site without a new release. If the config cannot be fetched, the built-in copy is used and nothing breaks. Pass remoteConfig: false to createGuard to turn this off. When a newer package is out, Guard logs one warning; install it with npm install agent-grade-guard@latest.
@@ -95,7 +107,7 @@ The totals are public in the [Agent Attack Index](https://simgen.dev/agent-grade
 
 ## What is sent to Agent Grade
 
-For each catch: the address, browser string, path, method, time and which decoy was tripped. Requests sent with a decoy key to the decoy AI endpoint also include the model name and the first 1,000 characters of the text sent. Nothing about ordinary visitors. Records are deleted after 90 days. Privacy: https://simgen.dev/privacy/
+For each catch: the address, browser string, path, method, time and which decoy was tripped. On the fake admin login, counts and timings of how the form was filled (mouse moves, key presses, clicks, time on the page, whether the browser reports automation); never what was typed and never which keys. Requests sent with a decoy key to the decoy AI endpoint also include the model name and the first 1,000 characters of the text sent. Nothing about ordinary visitors. Records are deleted after 90 days. Privacy: https://simgen.dev/privacy/
 
 ## robots.txt
 
