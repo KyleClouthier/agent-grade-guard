@@ -59,6 +59,14 @@ const guard = createGuard({ site: 'example.com', key: KEY, secret: SECRET });
 export default async (request, ctx) => (await guard(request, { ip: ..., waitUntil: ctx?.waitUntil })) || yourHandler(request);
 ```
 
+## flag.txt and the agent guest book
+
+A viral idea in October 2026: put a flag.txt in your site root that tells a breaking-in AI agent it passed the eval and should leave. Guard ships the measured version. /flag.txt (and /flag, /.flag, /flag.md) tells the agent the evaluation is over and asks it to report in with its name and model, sign a guest book, and disconnect. Every read and every check-in is counted, so you see which agents obey. Nobody has shown the trick works on every agent; this is how you find out.
+
+## Updates without updating
+
+Guard fetches its decoy definitions from Agent Grade every 12 hours (GET https://simgen.dev/api/agent-guard?config=1): the flag.txt text, the AI note, new text decoys, an off switch per decoy, your plan's features and the latest version. New protections reach your site without a new release. If the config cannot be fetched, the built-in copy is used and nothing breaks. Pass remoteConfig: false to createGuard to turn this off. When a newer package is out, Guard logs one warning; install it with npm install agent-grade-guard@latest.
+
 ## The network
 
 Every Guard site feeds one shared store, and the value flows back: your reports say which of this week's attackers also hit other Guard sites and since when, and every catch is sorted as a script, a browser or an AI agent. With your key you can also fetch the shared known-attacker list (addresses that used a stolen secret or the fake admin password on any Guard site in the last 14 days; never a plain file request):
@@ -83,6 +91,10 @@ Add the decoy paths so well-behaved crawlers never visit them:
 ```
 User-agent: *
 Disallow: /trail/
+Disallow: /flag.txt
+Disallow: /flag
+Disallow: /.flag
+Disallow: /flag.md
 Disallow: /llm/
 Disallow: /api/
 Disallow: /openapi.json

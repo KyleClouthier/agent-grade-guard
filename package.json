@@ -1,6 +1,6 @@
 {
   "name": "agent-grade-guard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Decoys that catch attack bots and AI agents on any site: Cloudflare Worker, Next.js middleware, Express. Reports to Agent Grade. Never blocks search engines or AI search bots.",
   "type": "module",
   "main": "./src/guard-core.js",
