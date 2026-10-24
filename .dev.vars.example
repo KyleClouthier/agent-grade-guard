@@ -1,0 +1,2 @@
+GUARD_KEY=your Agent Grade site key (free at simgen.dev/agent-grade/guard/)
+GUARD_SECRET=any long random string
