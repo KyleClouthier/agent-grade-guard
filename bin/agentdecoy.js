@@ -51,12 +51,20 @@ if (deps.next) {
   if (!hosting) { console.log('firebase.json has no hosting section.'); process.exit(1); }
   hosting.rewrites = hosting.rewrites || [];
   const have = new Set(hosting.rewrites.map((r) => r.source));
-  const add = FIREBASE_PATHS.filter((s) => !have.has(s)).map((source) => ({ source, function: { functionId: 'agentdecoy' } }));
+  // Use the region the project's functions already run in (Hosting assumes us-central1 when none is given).
+  const region = (hosting.rewrites.find((r) => r.function && typeof r.function === 'object' && r.function.region) || {}).function?.region || '';
+  const target = region ? { functionId: 'agentdecoy', region } : { functionId: 'agentdecoy' };
+  const add = FIREBASE_PATHS.filter((s) => !have.has(s)).map((source) => ({ source, function: target }));
   hosting.rewrites = [...add, ...hosting.rewrites]; // decoys first, before any catch-all to index.html
   fs.writeFileSync(path.join(cwd, 'firebase.json'), JSON.stringify(fb, null, 2) + '\n');
-  console.log(`added ${add.length} decoy rewrites to firebase.json`);
+  console.log(`added ${add.length} decoy rewrites to firebase.json${region ? ` (region ${region}, same as your functions)` : ''}`);
   const fnDir = (fb.functions && (Array.isArray(fb.functions) ? fb.functions[0] : fb.functions).source) || 'functions';
-  console.log(`\nFirebase: add this to ${fnDir}/index.js (and run npm install agentdecoy in ${fnDir}):\n\n  const { onRequest } = require('firebase-functions/v2/https');\n  exports.agentdecoy = onRequest(require('agentdecoy/firebase').handler());\n\n${KEY_HELP}: firebase functions:secrets:set AGENTDECOY_KEY (or an environment variable), then firebase deploy.\nNeeds the Blaze plan, like any Cloud Function.`);
+  const ts = fs.existsSync(path.join(cwd, fnDir, 'src', 'index.ts'));
+  const opts = `{ region: '${region || 'us-central1'}' }, `;
+  const line = ts
+    ? `  import { onRequest } from 'firebase-functions/v2/https';\n  // eslint-disable-next-line @typescript-eslint/no-require-imports\n  export const agentdecoy = onRequest(${opts}require('agentdecoy/firebase').handler());`
+    : `  const { onRequest } = require('firebase-functions/v2/https');\n  exports.agentdecoy = onRequest(${opts}require('agentdecoy/firebase').handler());`;
+  console.log(`\nFirebase: run npm install agentdecoy in ${fnDir}, then add this to ${fnDir}/${ts ? 'src/index.ts' : 'index.js'}:\n\n${line}\n\n${KEY_HELP}: as an environment variable for the function (${fnDir}/.env: AGENTDECOY_KEY=...) or a secret, then firebase deploy.\nNeeds the Blaze plan, like any Cloud Function.`);
 } else if (exists('vercel.json') || exists('.vercel')) {
   write(`middleware.${ext}`, "export { default } from 'agentdecoy/vercel';\n");
   console.log(`\nVercel: done. ${KEY_HELP} under Project Settings > Environment Variables, then redeploy.`);

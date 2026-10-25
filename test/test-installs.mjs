@@ -65,6 +65,18 @@ const req = (p, init = {}) => new Request('https://shop.example.com' + p, { head
   const rw = JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites;
   ok(rw[0].function.functionId === 'agentdecoy' && rw[rw.length - 1].destination === '/index.html' && /exports\.agentdecoy/.test(said), 'init: Firebase rewrites go before the SPA catch-all');
   run(d); ok(JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites.length === rw.length, 'init: running twice adds nothing');
+  // Firebase projects compiled to CommonJS: require() must work and serve decoys.
+  const { createRequire } = await import('node:module');
+  const cjs = createRequire(import.meta.url)('../src/firebase.cjs');
+  ok(JSON.stringify(cjs.FIREBASE_PATHS) === JSON.stringify(fb.FIREBASE_PATHS), 'Firebase: CommonJS and ESM path lists match');
+  const hc = cjs.handler();
+  const o2 = { status: 0, body: null };
+  await hc({ method: 'GET', url: '/.env', originalUrl: '/.env', headers: { host: 'shop.example.com', 'user-agent': 'curl/8' }, ip: '192.0.2.10', socket: {} }, { status(s) { o2.status = s; return this; }, setHeader() {}, end(b) { o2.body = b; }, send(b) { o2.body = b; } });
+  ok(o2.status === 200 && String(o2.body).length > 50, 'Firebase: CommonJS handler answers a decoy');
+  d = tmp({ 'firebase.json': JSON.stringify({ functions: { source: 'functions' }, hosting: { public: 'dist', rewrites: [{ source: '/unsubscribe', function: { functionId: 'unsubscribe', region: 'northamerica-northeast1' } }, { source: '**', destination: '/index.html' }] } }), 'functions/src/index.ts': '' });
+  const said2 = run(d);
+  const rw2 = JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites;
+  ok(rw2[0].function.region === 'northamerica-northeast1' && /region: 'northamerica-northeast1'/.test(said2) && /export const agentdecoy/.test(said2), 'init: Firebase keeps the functions region and prints the TypeScript line');
   d = tmp({ 'package.json': JSON.stringify({ dependencies: { next: '15.0.0' } }), 'middleware.js': '// mine' });
   run(d); ok(fs.readFileSync(path.join(d, 'middleware.js'), 'utf8') === '// mine', 'init: never overwrites an existing middleware');
 
