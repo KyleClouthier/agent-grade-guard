@@ -73,7 +73,9 @@ const req = (p, init = {}) => new Request('https://shop.example.com' + p, { head
   d = tmp({ 'firebase.json': JSON.stringify({ hosting: { public: 'dist', rewrites: [{ source: '**', destination: '/index.html' }] } }) });
   const said = run(d);
   const rw = JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites;
-  ok(rw[0].function.functionId === 'agentdecoy' && rw[rw.length - 1].destination === '/index.html' && /exports\.agentdecoy/.test(said), 'init: Firebase rewrites go before the SPA catch-all');
+  ok(rw[0].function.functionId === 'agentdecoy' && rw[rw.length - 1].destination === '/index.html', 'init: Firebase rewrites go before the SPA catch-all');
+  const fj = JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8'));
+  ok(/exports\.agentdecoy/.test(fs.readFileSync(path.join(d, 'functions/index.js'), 'utf8')) && fj.functions.source === 'functions' && fs.readFileSync(path.join(d, 'functions/.gitignore'), 'utf8').includes('.env') && /cd functions/.test(said), 'init: a static Firebase site gets a functions folder with the decoy function (2.4.0)');
   run(d); ok(JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites.length === rw.length, 'init: running twice adds nothing');
   // Firebase projects compiled to CommonJS: require() must work and serve decoys.
   const { createRequire } = await import('node:module');

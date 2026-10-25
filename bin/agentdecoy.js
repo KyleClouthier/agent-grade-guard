@@ -57,9 +57,20 @@ if (deps.next) {
   const target = region ? { functionId: 'agentdecoy', region } : { functionId: 'agentdecoy' };
   const add = FIREBASE_PATHS.filter((s) => !have.has(s)).map((source) => ({ source, function: target }));
   hosting.rewrites = [...add, ...hosting.rewrites]; // decoys first, before any catch-all to index.html
+  const fnDir = (fb.functions && (Array.isArray(fb.functions) ? fb.functions[0] : fb.functions).source) || 'functions';
+  // A static site with no functions yet: make a minimal functions folder that holds only the decoys.
+  if (!fs.existsSync(path.join(cwd, fnDir))) {
+    if (!fb.functions) fb.functions = { source: fnDir };
+    write(`${fnDir}/package.json`, JSON.stringify({ name: 'agentdecoy-functions', private: true, main: 'index.js', engines: { node: '20' }, dependencies: { 'firebase-functions': '^6', 'firebase-admin': '^12', agentdecoy: '^2' } }, null, 2) + '\n');
+    write(`${fnDir}/index.js`, `// AgentDecoy decoys for this site (npx agentdecoy init). Your key goes in ${fnDir}/.env as AGENTDECOY_KEY=...\nconst { onRequest } = require('firebase-functions/v2/https');\nexports.agentdecoy = onRequest({ region: '${region || 'us-central1'}' }, require('agentdecoy/firebase').handler());\n`);
+    write(`${fnDir}/.gitignore`, 'node_modules/\n.env\n');
+    fs.writeFileSync(path.join(cwd, 'firebase.json'), JSON.stringify(fb, null, 2) + '\n');
+    console.log(`added ${add.length} decoy rewrites to firebase.json and a new ${fnDir}/ folder with the decoy function`);
+    console.log(`\nFirebase: next, run  cd ${fnDir} && npm install . Get your free key at https://simgen.dev/agentdecoy and put it in ${fnDir}/.env as AGENTDECOY_KEY=... then firebase deploy.\nNeeds the Blaze plan, like any Cloud Function.`);
+    process.exit(0);
+  }
   fs.writeFileSync(path.join(cwd, 'firebase.json'), JSON.stringify(fb, null, 2) + '\n');
   console.log(`added ${add.length} decoy rewrites to firebase.json${region ? ` (region ${region}, same as your functions)` : ''}`);
-  const fnDir = (fb.functions && (Array.isArray(fb.functions) ? fb.functions[0] : fb.functions).source) || 'functions';
   const ts = fs.existsSync(path.join(cwd, fnDir, 'src', 'index.ts'));
   const opts = `{ region: '${region || 'us-central1'}' }, `;
   const line = ts
