@@ -33,7 +33,8 @@ if (cmd !== 'init') {
   console.log('Usage: npx agentdecoy init   (run it in your project folder)');
   process.exit(cmd ? 1 : 0);
 }
-if (!deps.agentdecoy) console.log('Tip: install the package first: npm install agentdecoy');
+const fnPkg = readJson('functions/package.json');
+if (!deps.agentdecoy && !(fnPkg && (fnPkg.dependencies || {}).agentdecoy)) console.log('Tip: install the package first: npm install agentdecoy');
 
 if (deps.next) {
   const dir = exists('src/app') || exists('src/pages') ? 'src/' : '';

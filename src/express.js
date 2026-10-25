@@ -24,11 +24,16 @@ export function agentGradeGuard(options) {
       const headers = new Headers();
       for (const [k, v] of Object.entries(req.headers)) if (v !== undefined) headers.set(k, Array.isArray(v) ? v.join(', ') : String(v));
       const request = new Request(url, { method: req.method, headers, body: chunks.length ? Buffer.concat(chunks) : undefined });
-      const out = await guard(request, { ip: req.ip || req.socket?.remoteAddress || '' });
+      // The report to AgentDecoy is sent before the answer: Cloud Functions, Cloud Run and other serverless hosts
+      // freeze the CPU once a response is sent, so a report left running in the background never arrives.
+      const pending = [];
+      const out = await guard(request, { ip: req.ip || req.socket?.remoteAddress || '', waitUntil: (p) => pending.push(p) });
       if (!out) return next();
+      const body = Buffer.from(await out.arrayBuffer());
+      await Promise.race([Promise.allSettled(pending), new Promise((r) => setTimeout(r, 3000))]);
       res.status(out.status);
       out.headers.forEach((v, k) => res.setHeader(k, v));
-      res.end(Buffer.from(await out.arrayBuffer()));
+      res.end(body);
     } catch (e) { next(e); }
   };
 }

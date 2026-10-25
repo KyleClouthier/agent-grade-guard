@@ -45,6 +45,7 @@ const req = (p, init = {}) => new Request('https://shop.example.com' + p, { head
   const res = { status(s) { out.status = s; return this; }, setHeader(k, v) { out.headers[k] = v; }, end(b) { out.body = b; }, send(b) { out.body = b; } };
   await h({ method: 'GET', url: '/wp-admin/', originalUrl: '/wp-admin/', headers: { host: 'shop.example.com', 'user-agent': 'curl/8' }, ip: '192.0.2.9', socket: {} }, res);
   ok(out.status === 200 && String(out.body).includes('<form'), 'Firebase: handler answers a decoy');
+  ok(reports.some((r) => r.ip === '192.0.2.9' && r.kind === 'admin'), 'Firebase/Express: the report is sent before the answer (serverless hosts freeze after responding)');
   await h({ method: 'GET', url: '/', originalUrl: '/', headers: { host: 'shop.example.com' }, ip: '192.0.2.9', socket: {} }, res);
   ok(out.status === 404, 'Firebase: anything else is a 404 (Hosting serves the real site)');
 
