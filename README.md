@@ -1,6 +1,10 @@
 # AgentDecoy
 
+[![npm](https://img.shields.io/npm/v/agentdecoy?color=d4a017)](https://www.npmjs.com/package/agentdecoy) [![downloads](https://img.shields.io/npm/dm/agentdecoy?color=d4a017)](https://www.npmjs.com/package/agentdecoy) [![GitHub Action](https://img.shields.io/badge/GitHub%20Action-AgentDecoy%20scan-d4a017)](https://github.com/marketplace/actions/agentdecoy-scan) [![sites protected](https://img.shields.io/badge/live%20catches-simgen.dev%2Fagentdecoy-red)](https://simgen.dev/agentdecoy/#live)
+
 **Security for the AI-agent era: decoys that catch hostile AI agents, and a shared network that locks them out.**
+
+What makes it different: decoys for what AI agents hunt now (a fake MCP server, fake AI coding-tool configs, fake AI keys), every stolen key traced to the visit it was taken on, every catch labelled script, person or AI agent, and an address caught on one site locked out of every protected site within the hour. Plus free [tripwires](https://simgen.dev/agentdecoy/tripwires/) you plant in repos and docs: a fake OpenAI key or a fake MCP server entry that emails you the moment it is used. Live catches from every protected site: [simgen.dev/agentdecoy](https://simgen.dev/agentdecoy/#live).
 
 ![AgentDecoy: scan, catch, identify, shut out](https://raw.githubusercontent.com/KyleClouthier/agentdecoy/main/docs/agentdecoy-how-it-works.png)
 
@@ -12,7 +16,7 @@ That is what this package does for your site. It plants decoys that look exactly
 npm install agentdecoy
 ```
 
-Free. One file on almost any host: Next.js, Vercel (any framework), Netlify, Firebase, Cloudflare and any Node server. The WordPress version is a [plugin](https://simgen.dev/agentdecoy/guard/). Formerly `agent-grade-guard`.
+Free. One file on almost any host: Next.js, Vercel (any framework), Netlify, Firebase, Cloudflare and any Node server. The WordPress version is a [plugin](https://simgen.dev/agentdecoy/guard/), and plain PHP sites (cPanel, Apache) have a [one-file version](php/). Formerly `agent-grade-guard`.
 
 ## Install in one step
 
