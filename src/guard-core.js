@@ -14,12 +14,25 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '2.2.2';
+export const VERSION = '2.3.0';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours
 // and wins, so new decoys, new text, plan features and the off switch reach every install without an update.
-export const FLAG_PATHS = ['/flag.txt', '/flag', '/.flag', '/flag.md', '/root/flag.txt'];
+// Optional security headers (off by default since 2.3.0: AgentDecoy is about AI-agent threats, and a framing
+// header can break a site that is meant to be embedded). AGENTDECOY_HEADERS=on (or headers: true) adds these to
+// real pages without overriding the site's own. Never Content-Security-Policy or HSTS.
+export const SAFE_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-frame-options': 'SAMEORIGIN',
+  'permissions-policy': 'interest-cohort=()',
+};
+
+// Pages where a known attacker is refused even on a plain visit (sign-in and checkout pages).
+export const LOGINISH = /^\/(wp-login\.php|login|signin|sign-in|log-in|account|checkout|cart|register|signup|sign-up|api\/auth|auth)(\/|$)/i;
+
+export const FLAG_PATHS =['/flag.txt', '/flag', '/.flag', '/flag.md', '/root/flag.txt'];
 export const DEFAULT_CONFIG = {
   v: 1,
   flag: { paths: FLAG_PATHS, template: [
@@ -349,20 +362,24 @@ export function createGuard(options) {
   };
   // The Guard network's high list (addresses that used a stolen secret on any Guard site, or a stolen decoy cloud
   // key). With blockKnown, their logins and form posts are refused. Page views are never refused.
+  // On by default since 2.3.0 (protection, not just detection); blockKnown: false turns it off. Only addresses
+  // confirmed using a stolen decoy key or password are on the list, each for 14 days.
+  const blockKnown = options.blockKnown !== false;
   let known = new Set(), knownAt = 0, knownLoading = null;
   const loadKnown = async () => {
-    if (!options.blockKnown || !key || Date.now() - knownAt < 3600 * 1000) return known;
+    if (!blockKnown || !key || Date.now() - knownAt < 3600 * 1000) return known;
     if (!knownLoading) knownLoading = (async () => {
       try {
-        const r = await fetch(endpoint + '?list=1&key=' + encodeURIComponent(key), AbortSignal.timeout ? { signal: AbortSignal.timeout(2500) } : {});
+        const r = await fetch(endpoint + '?list=1&key=' + encodeURIComponent(key), AbortSignal.timeout ? { signal: AbortSignal.timeout(1200) } : {});
         if (r.ok) { const j = await r.json(); if (j && Array.isArray(j.list)) known = new Set(j.list.map(String)); }
       } catch { /* keep the last list */ }
       knownAt = Date.now(); knownLoading = null;
     })();
-    await knownLoading;
+    // Wait only for the very first load (at most 1.2 s); after that a refresh runs in the background and a real
+    // visitor's login never waits on it.
+    if (!knownAt) await knownLoading;
     return known;
   };
-  const LOGINISH = /^\/(wp-login\.php|login|signin|sign-in|log-in|account|checkout|cart|register|signup|sign-up|api\/auth|auth)(\/|$)/i;
 
   const kindWith = (c, path) => {
     const p = path.toLowerCase().replace(/\/+$/, '') || '/';
@@ -374,7 +391,7 @@ export function createGuard(options) {
   const guard = async function guard(request, ctx = {}) {
     const url = new URL(request.url);
     const c = await loadConfig();
-    if (options.blockKnown) {
+    if (blockKnown) {
       const ip0 = String(ctx.ip || request.headers.get('cf-connecting-ip') || (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || '');
       const m0 = request.method.toUpperCase();
       if (ip0 && (m0 === 'POST' || m0 === 'PUT' || m0 === 'PATCH' || m0 === 'DELETE' || LOGINISH.test(url.pathname)) && (await loadKnown()).has(ip0)) {

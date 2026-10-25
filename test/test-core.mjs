@@ -160,7 +160,11 @@ const text = async (r) => r.text();
   const lg4 = await g4(new Request('https://example.com/wp-login.php', { headers: { 'user-agent': 'curl/8' } }), { ip: '198.51.100.99' });
   ok(lg4 && lg4.status === 403, 'known attacker refused on a login page');
   ok((await g4(new Request('https://example.com/contact', { method: 'POST', body: 'x=1' }), { ip: '203.0.113.5' })) === null, 'everyone else posts normally');
-  ok((await guard(new Request('https://example.com/contact', { method: 'POST', body: 'x=1' }), { ip: '198.51.100.99' })) === null, 'off unless blockKnown is set');
+  const g5 = createGuard({ site: 'example.com', key: 'j'.repeat(32), secret: 'test-secret' });
+  const onByDefault = await g5(new Request('https://example.com/contact', { method: 'POST', body: 'x=1' }), { ip: '198.51.100.99' });
+  ok(onByDefault && onByDefault.status === 403, 'network block is on by default (2.3.0)');
+  const g6 = createGuard({ site: 'example.com', key: 'j'.repeat(32), secret: 'test-secret', blockKnown: false });
+  ok((await g6(new Request('https://example.com/contact', { method: 'POST', body: 'x=1' }), { ip: '198.51.100.99' })) === null, 'blockKnown: false turns it off');
   // AI decoys (2.1.0): built in, served without the remote config, keys traced back to the visit.
   const cfg = await guard(...req('/.cursor/mcp.json', { ip: '203.0.113.77' }));
   const cfgBody = cfg ? await cfg.text() : '';

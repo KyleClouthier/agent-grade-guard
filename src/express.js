@@ -7,18 +7,26 @@
  * Put it before your routes and before any static handler. It answers decoy paths and calls next() for everything
  * else. If your app sits behind a proxy, set app.set('trust proxy', true) so req.ip is the visitor.
  */
-import { createGuard, kindOf } from './guard-core.js';
+import { createGuard, kindOf, SAFE_HEADERS, LOGINISH } from './guard-core.js';
 
 export function agentGradeGuard(options) {
   const guard = createGuard(options);
   return async function (req, res, next) {
     const path = (req.originalUrl || req.url || '/').split('?')[0];
-    if (!kindOf(path, { aiServer: !!options.aiServer })) return next();
+    // Optional security headers (headers: true); a header the app sets later still wins.
+    if (options.headers === true && typeof res.getHeader === 'function') for (const [k, v] of Object.entries(SAFE_HEADERS)) if (!res.getHeader(k)) res.setHeader(k, v);
+    const decoy = !!kindOf(path, { aiServer: !!options.aiServer });
+    const reading = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS';
+    // Real pages that only read go straight on. Real form posts and logins still pass the network block (2.3.0),
+    // but their body is never touched, so the app's own body parser gets it intact.
+    if (!decoy && reading && !LOGINISH.test(path)) return next();
     try {
       const chunks = [];
-      // Firebase Functions (and some body parsers) have already read the body: use their raw copy.
-      if (req.rawBody && req.rawBody.length) chunks.push(Buffer.from(req.rawBody));
-      else if (req.method !== 'GET' && req.method !== 'HEAD' && req.readable) for await (const c of req) chunks.push(c);
+      if (decoy) {
+        // Firebase Functions (and some body parsers) have already read the body: use their raw copy.
+        if (req.rawBody && req.rawBody.length) chunks.push(Buffer.from(req.rawBody));
+        else if (!reading && req.readable) for await (const c of req) chunks.push(c);
+      }
       const proto = req.headers['x-forwarded-proto'] || (req.socket && req.socket.encrypted ? 'https' : 'http');
       const url = `${proto}://${req.headers.host || options.site}${req.originalUrl || req.url}`;
       const headers = new Headers();

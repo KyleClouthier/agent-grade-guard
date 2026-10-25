@@ -23,6 +23,15 @@ const req = (p, init = {}) => new Request('https://shop.example.com' + p, { head
   const next = await import('../src/next.js');
   const page = await next.middleware(req('/pricing'), { waitUntil() {} });
   ok(page.headers.get('x-middleware-next') === '1', 'Next.js: real page carries on');
+  ok(!page.headers.get('x-content-type-options') && !page.headers.get('x-frame-options'), 'Next.js: no extra headers by default (2.3.0)');
+  process.env.AGENTDECOY_HEADERS = 'on';
+  const pageOn = await next.middleware(req('/pricing'), { waitUntil() {} });
+  ok(pageOn.headers.get('x-content-type-options') === 'nosniff' && pageOn.headers.get('x-frame-options') === 'SAMEORIGIN' && !pageOn.headers.get('content-security-policy'), 'AGENTDECOY_HEADERS=on: safe headers on real pages, never CSP');
+  const nl = (await import('../src/netlify.js')).default;
+  const withHdr = await nl(req('/blog'), { ip: '198.51.100.4', next: async () => new Response('<p>blog</p>', { status: 200, headers: { 'x-frame-options': 'DENY' } }) });
+  ok(withHdr.status === 200 && withHdr.headers.get('x-content-type-options') === 'nosniff' && withHdr.headers.get('x-frame-options') === 'DENY' && (await withHdr.text()) === '<p>blog</p>', 'Netlify: safe headers added, the site’s own header kept, page body untouched');
+  delete process.env.AGENTDECOY_HEADERS;
+  ok((await nl(req('/blog'), { ip: '198.51.100.4', next: async () => new Response('x') })) === undefined, 'Netlify: by default real pages pass straight through');
   const env = await next.middleware(req('/.env'), { waitUntil() {} });
   ok(env.status === 200 && /OPENAI_API_KEY|AWS|DB_/.test(await env.text()), 'Next.js: decoy answered');
   ok(next.proxy === next.middleware && typeof next.agentDecoy === 'function', 'Next.js 16 proxy export and agentDecoy() for existing middleware');

@@ -8,11 +8,16 @@
  * Then add AGENTDECOY_KEY (your free key) under Site configuration > Environment variables and redeploy.
  * Requests that are not decoy paths go on to your site untouched.
  */
-import { lazyGuard, ipOf } from './env.js';
+import { lazyGuard, ipOf, withSafeHeaders, safeHeadersOn } from './env.js';
 
 const get = lazyGuard();
 
 export default async function agentdecoy(request, context) {
   const res = await get(request)(request, { ip: (context && context.ip) || ipOf(request.headers), waitUntil: context && typeof context.waitUntil === 'function' ? (p) => context.waitUntil(p) : undefined });
-  return res || undefined; // undefined: Netlify carries on to the site
+  if (res) return res;
+  // Real pages: add the safe security headers (unless AGENTDECOY_HEADERS=off), else let Netlify carry on untouched.
+  if (!safeHeadersOn() || !context || typeof context.next !== 'function') return undefined;
+  const page = await context.next();
+  const headers = withSafeHeaders(new Headers(page.headers));
+  return new Response(page.body, { status: page.status, statusText: page.statusText, headers });
 }

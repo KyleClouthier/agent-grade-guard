@@ -16,7 +16,7 @@ let guard: ((req: Request, ctx: Record<string, unknown>) => Promise<Response | n
 
 export async function middleware(req: NextRequest, ev: NextFetchEvent) {
   if (!guard) {
-    guard = createGuard({ site: process.env.AGENT_GRADE_SITE || req.nextUrl.hostname, key: process.env.AGENT_GRADE_KEY || '', secret: process.env.AGENT_GRADE_SECRET || process.env.AGENT_GRADE_KEY || 'change-me', directory: process.env.AGENT_GRADE_DIRECTORY === 'on', blockKnown: process.env.AGENT_GRADE_BLOCK_KNOWN === 'on' });
+    guard = createGuard({ site: process.env.AGENT_GRADE_SITE || req.nextUrl.hostname, key: process.env.AGENT_GRADE_KEY || '', secret: process.env.AGENT_GRADE_SECRET || process.env.AGENT_GRADE_KEY || 'change-me', directory: process.env.AGENT_GRADE_DIRECTORY === 'on', blockKnown: process.env.AGENT_GRADE_BLOCK_KNOWN !== 'off' });
   }
   const ip = (req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
   // Vercel sets x-vercel-verified-bot? Not yet; reverse DNS and address lists are used instead.

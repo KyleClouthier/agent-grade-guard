@@ -148,7 +148,11 @@ GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&list=1      -> { list: ["203
 GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&intel=ip1,ip2 -> where those addresses were seen elsewhere
 ```
 
-Or let Guard do it: set blockKnown: true (Cloudflare: BLOCK_KNOWN = "on"; Next.js: AGENT_GRADE_BLOCK_KNOWN=on) and listed addresses get a 403 on logins, sign-ups, checkouts and any form post, while they can still read your pages. The list is refreshed hourly. Use it to refuse logins or form posts from listed addresses yourself if you prefer. Never apply it to ordinary page views: verified search and AI crawlers are never on it, but a blanket block is still the wrong tool.
+Guard does this for you by default (since 2.3.0): listed addresses get a 403 on logins, sign-ups, checkouts and any form post, while they can still read your pages. The list is refreshed hourly. Ordinary page views are never blocked, and verified search and AI crawlers are never on the list. To turn it off: blockKnown: false (one-file installs: AGENTDECOY_BLOCK=off; Cloudflare: BLOCK_KNOWN = "off"; Next.js template: AGENT_GRADE_BLOCK_KNOWN=off).
+
+## Optional security headers
+
+Off by default since 2.3.0, so Guard never changes how your real pages behave. To add nosniff, a frame guard and a referrer policy to real pages (never a Content-Security-Policy, and never over a header your site already sets): AGENTDECOY_HEADERS=on for the one-file installs, or headers: true in Express.
 
 The totals are public in the [Agent Attack Index](https://simgen.dev/agentdecoy/attack-index/).
 

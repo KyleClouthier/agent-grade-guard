@@ -9,11 +9,11 @@
  * agentDecoy() first and fall through to yours when it returns undefined (see the README).
  * Every request that is not a decoy path passes straight through.
  */
-import { lazyGuard, ipOf } from './env.js';
+import { lazyGuard, ipOf, withSafeHeaders, safeHeadersOn } from './env.js';
 
 // The header Next.js itself uses to mean "carry on to the page" (what NextResponse.next() returns), so this file has
 // no import from next/server and works the same in middleware.ts and proxy.ts.
-const carryOn = () => new Response(null, { headers: { 'x-middleware-next': '1' } });
+const carryOn = () => new Response(null, { headers: withSafeHeaders(new Headers({ 'x-middleware-next': '1' })) });
 
 export function agentDecoy(overrides) {
   const get = lazyGuard(overrides);
