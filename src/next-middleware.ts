@@ -29,7 +29,7 @@ export const config = {
     '/(.*\\.env.*)', '/(.*\\.git/.*)', '/(.*\\.aws/.*)', '/(.*wp-config\\.php.*)',
     '/(backup|site-backup|www)\\.zip', '/backups/backup.zip', '/phpinfo.php', '/info.php', '/(.*\\.sql)',
     '/trail', '/trail/:path*', '/api/docs', '/api/docs/', '/openapi.json', '/swagger.json',
-    '/.well-known/mcp.json', '/mcp', '/mcp/', '/api/agent-check', '/api/v1/:path*', '/llm/:path*',
+    '/.well-known/mcp.json', '/mcp', '/mcp/', '/.mcp.json', '/.mcp/:path*', '/.claude/:path*', '/.cursor/:path*', '/.vscode/:path*', '/api/agent-check', '/api/v1/:path*', '/llm/:path*',
     '/admin', '/admin/:path*', '/administrator', '/administrator/:path*', '/wp-admin', '/wp-admin/:path*', '/wp-login.php',
   ],
 };
