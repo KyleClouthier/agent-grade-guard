@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+/**
+ * npx agentdecoy init      looks at the project in this folder and adds the one file it needs:
+ *   Next.js           middleware.ts (Next 15 and earlier) or proxy.ts (Next 16), at the root or in src/
+ *   Vercel (other)    middleware.ts at the root (Vercel Routing Middleware)
+ *   Netlify           netlify/edge-functions/agentdecoy.ts
+ *   Firebase Hosting  a function in functions/ and the decoy rewrites in firebase.json
+ *   Express / Node    prints the one line to add
+ * It never overwrites a file you already have: it prints what to add instead.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+
+const cwd = process.cwd();
+const exists = (p) => fs.existsSync(path.join(cwd, p));
+const readJson = (p) => { try { return JSON.parse(fs.readFileSync(path.join(cwd, p), 'utf8')); } catch { return null; } };
+const write = (p, body) => {
+  const full = path.join(cwd, p);
+  if (fs.existsSync(full)) { console.log(`\n${p} already exists. Add this to it yourself:\n\n${body}`); return false; }
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, body);
+  console.log(`added ${p}`);
+  return true;
+};
+const pkg = readJson('package.json') || {};
+const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+const major = (v) => parseInt(String(v || '').replace(/[^0-9.]/g, '').split('.')[0], 10) || 0;
+const ext = exists('tsconfig.json') ? 'ts' : 'js';
+const KEY_HELP = 'Get your free key at https://simgen.dev/agentdecoy, then add AGENTDECOY_KEY';
+
+const cmd = process.argv[2];
+if (cmd !== 'init') {
+  console.log('Usage: npx agentdecoy init   (run it in your project folder)');
+  process.exit(cmd ? 1 : 0);
+}
+if (!deps.agentdecoy) console.log('Tip: install the package first: npm install agentdecoy');
+
+if (deps.next) {
+  const dir = exists('src/app') || exists('src/pages') ? 'src/' : '';
+  const v16 = major(deps.next) >= 16;
+  const file = `${dir}${v16 ? 'proxy' : 'middleware'}.${ext}`;
+  write(file, v16 ? "export { proxy } from 'agentdecoy/next';\n" : "export { middleware } from 'agentdecoy/next';\n");
+  console.log(`\nNext.js: done. ${KEY_HELP} to your environment variables (Vercel: Project Settings > Environment Variables), then redeploy.`);
+} else if (exists('netlify.toml') || exists('netlify')) {
+  write(`netlify/edge-functions/agentdecoy.${ext}`, "export { default } from 'agentdecoy/netlify';\nexport const config = { path: '/*', excludedPath: ['/assets/*', '/*.css', '/*.js', '/*.png', '/*.jpg', '/*.svg', '/*.woff2'] };\n");
+  console.log(`\nNetlify: done. ${KEY_HELP} under Site configuration > Environment variables, then redeploy.`);
+} else if (exists('firebase.json')) {
+  const fb = readJson('firebase.json');
+  const { FIREBASE_PATHS } = await import('../src/firebase.js');
+  const hosting = Array.isArray(fb.hosting) ? fb.hosting[0] : fb.hosting;
+  if (!hosting) { console.log('firebase.json has no hosting section.'); process.exit(1); }
+  hosting.rewrites = hosting.rewrites || [];
+  const have = new Set(hosting.rewrites.map((r) => r.source));
+  const add = FIREBASE_PATHS.filter((s) => !have.has(s)).map((source) => ({ source, function: { functionId: 'agentdecoy' } }));
+  hosting.rewrites = [...add, ...hosting.rewrites]; // decoys first, before any catch-all to index.html
+  fs.writeFileSync(path.join(cwd, 'firebase.json'), JSON.stringify(fb, null, 2) + '\n');
+  console.log(`added ${add.length} decoy rewrites to firebase.json`);
+  const fnDir = (fb.functions && (Array.isArray(fb.functions) ? fb.functions[0] : fb.functions).source) || 'functions';
+  console.log(`\nFirebase: add this to ${fnDir}/index.js (and run npm install agentdecoy in ${fnDir}):\n\n  const { onRequest } = require('firebase-functions/v2/https');\n  exports.agentdecoy = onRequest(require('agentdecoy/firebase').handler());\n\n${KEY_HELP}: firebase functions:secrets:set AGENTDECOY_KEY (or an environment variable), then firebase deploy.\nNeeds the Blaze plan, like any Cloud Function.`);
+} else if (exists('vercel.json') || exists('.vercel')) {
+  write(`middleware.${ext}`, "export { default } from 'agentdecoy/vercel';\n");
+  console.log(`\nVercel: done. ${KEY_HELP} under Project Settings > Environment Variables, then redeploy.`);
+} else if (deps.express || deps.fastify || deps.koa) {
+  console.log(`\nNode server: add this before your routes:\n\n  import { agentGradeGuard } from 'agentdecoy/express';\n  app.use(agentGradeGuard({ site: 'yourdomain.com', key: process.env.AGENTDECOY_KEY }));\n\n${KEY_HELP} to your environment.`);
+} else {
+  console.log('\nCould not tell how this site is hosted. Options: https://simgen.dev/agentdecoy/guard/ (Next.js, Vercel, Netlify, Firebase, Cloudflare, WordPress, PHP, Node).');
+}

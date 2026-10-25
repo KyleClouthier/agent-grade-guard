@@ -12,7 +12,36 @@ That is what this package does for your site. It plants decoys that look exactly
 npm install agentdecoy
 ```
 
-Free, for Cloudflare Workers (any site on Cloudflare, including Shopify, Wix and Squarespace), Next.js and Express. The WordPress version is a [plugin](https://simgen.dev/agentdecoy/guard/). Formerly `agent-grade-guard` (same code, new name; the old package points here).
+Free. One file on almost any host: Next.js, Vercel (any framework), Netlify, Firebase, Cloudflare and any Node server. The WordPress version is a [plugin](https://simgen.dev/agentdecoy/guard/). Formerly `agent-grade-guard`.
+
+## Install in one step
+
+In your project folder:
+
+```
+npm install agentdecoy
+npx agentdecoy init
+```
+
+`init` looks at your project and adds the one file it needs (it never overwrites yours). Then add your free key as `AGENTDECOY_KEY` in your host's environment variables and redeploy. Or add the file yourself:
+
+| Your site | The one file | What goes in it |
+|---|---|---|
+| Next.js 15 or earlier (v0, Cursor, Bolt) | `middleware.ts` at the root (or in `src/`) | `export { middleware } from 'agentdecoy/next';` |
+| Next.js 16 | `proxy.ts` at the root (or in `src/`) | `export { proxy } from 'agentdecoy/next';` |
+| Any other framework on Vercel (Vite, React, Astro, SvelteKit) | `middleware.ts` at the root | `export { default } from 'agentdecoy/vercel';` |
+| Netlify (Bolt, Lovable exports, Vite) | `netlify/edge-functions/agentdecoy.ts` | `export { default } from 'agentdecoy/netlify';` plus `export const config = { path: '/*' };` |
+| Firebase Hosting | a function and rewrites | run `npx agentdecoy init` (needs the Blaze plan) |
+| Express, Replit, Render, Railway, Fly | your server file | `app.use(agentGradeGuard({ site, key: process.env.AGENTDECOY_KEY }))` from `agentdecoy/express` |
+| Shopify, Wix, Squarespace on Cloudflare | a Cloudflare Worker | see below |
+
+**Built with an AI builder?** Paste this into Lovable, Bolt, v0, Cursor or Replit:
+
+> Add the AgentDecoy decoys to this project: run `npm install agentdecoy`, then `npx agentdecoy init`, and follow what it prints. If you cannot run commands, add the one file from the table at https://www.npmjs.com/package/agentdecoy for this project's host. The key goes in an environment variable named AGENTDECOY_KEY; ask me for it. Do not change anything else.
+
+Already have a middleware? `import { agentDecoy } from 'agentdecoy/next'`, call `await agentDecoy()(request, event)` first and return its response when it is not undefined.
+
+Optional: `AGENTDECOY_AI_SERVER=on` also turns the site into a fake self-hosted AI server (Ollama's `/api/tags` and `/api/generate`, OpenAI-style `/v1/`), which AI-key thieves scan for. Leave it off if your site has its own `/api/chat` or `/v1/` routes.
 
 **Not sure if you are exposed?** The [free scan](https://simgen.dev/agentdecoy/) shows the ways in a hostile agent would use today. A real result from one of my own sites:
 

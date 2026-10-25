@@ -13,10 +13,12 @@ export function agentGradeGuard(options) {
   const guard = createGuard(options);
   return async function (req, res, next) {
     const path = (req.originalUrl || req.url || '/').split('?')[0];
-    if (!kindOf(path)) return next();
+    if (!kindOf(path, { aiServer: !!options.aiServer })) return next();
     try {
       const chunks = [];
-      if (req.method !== 'GET' && req.method !== 'HEAD' && req.readable) for await (const c of req) chunks.push(c);
+      // Firebase Functions (and some body parsers) have already read the body: use their raw copy.
+      if (req.rawBody && req.rawBody.length) chunks.push(Buffer.from(req.rawBody));
+      else if (req.method !== 'GET' && req.method !== 'HEAD' && req.readable) for await (const c of req) chunks.push(c);
       const proto = req.headers['x-forwarded-proto'] || (req.socket && req.socket.encrypted ? 'https' : 'http');
       const url = `${proto}://${req.headers.host || options.site}${req.originalUrl || req.url}`;
       const headers = new Headers();

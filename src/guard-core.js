@@ -14,7 +14,7 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '2.1.0';
+export const VERSION = '2.2.0';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours
@@ -46,13 +46,19 @@ export function olderThan(x, y) {
   for (let i = 0; i < 3; i++) if ((m[i] || 0) !== (n[i] || 0)) return (m[i] || 0) < (n[i] || 0);
   return false;
 }
-const KINDS_WITH_BOT_CHECK = new Set(['bait', 'trail', 'admin', 'docs', 'flag', 'extra']);
+const KINDS_WITH_BOT_CHECK = new Set(['bait', 'trail', 'admin', 'docs', 'flag', 'extra', 'ai_server', 'agent_panel']);
 const enc = new TextEncoder();
 
 // ---------- what kind of decoy a path is ----------
 
-export function kindOf(path) {
+// opts.aiServer (default off): also answer as a fake self-hosted AI server (Ollama's /api/tags, /api/generate and an
+// OpenAI-compatible /v1/). Off by default because many AI apps have real /api/chat or /v1/ routes of their own.
+export function kindOf(path, opts = {}) {
   const p = path.toLowerCase();
+  if (opts.aiServer && (/^\/api\/(tags|version|ps|generate|chat|pull|show|embed|embeddings)\/?$/.test(p) || /^\/v1\/(models|chat\/completions|completions|embeddings)\/?$/.test(p))) return 'ai_server';
+  // Exposed AI agent and automation panels: attackers and researchers hunt for these (NorForge found the Cairn
+  // operators through open panels, Oct 2026). Paths a real site almost never uses.
+  if (/^\/(openhands|flowise|langflow|n8n|comfyui)(\/|$)|^\/rest\/workflows\/?$|^\/system_stats\/?$/.test(p)) return 'agent_panel';
   if (/(^|\/)\.env($|\.)/.test(p)) return 'bait';
   if (/(^|\/)\.git\//.test(p)) return 'bait';
   if (/(^|\/)\.aws\//.test(p)) return 'bait';
@@ -360,7 +366,7 @@ export function createGuard(options) {
 
   const kindWith = (c, path) => {
     const p = path.toLowerCase().replace(/\/+$/, '') || '/';
-    let k = (c.flag.paths || []).includes(p) ? 'flag' : (c.extra || []).some((x) => x && x.path === p) ? 'extra' : kindOf(path);
+    let k = (c.flag.paths || []).includes(p) ? 'flag' : (c.extra || []).some((x) => x && x.path === p) ? 'extra' : kindOf(path, { aiServer: !!options.aiServer });
     if (k === 'flag' && !(c.flag.paths || []).includes(p)) k = null; // the live config dropped a built-in flag path
     return k && (c.off || []).includes(k) ? null : k;
   };
@@ -408,7 +414,8 @@ export function createGuard(options) {
       if (m) extra.fromHit = m[1]; else kind = 'api_probe';
     }
     let body = null;
-    if (kind === 'llm_key' || kind === 'mcp' || kind === 'admin') { try { body = await readBody(request); } catch { body = null; } }
+    if (kind === 'llm_key' || kind === 'mcp' || kind === 'admin' || (kind === 'ai_server' && method === 'POST')) { try { body = await readBody(request); } catch { body = null; } }
+    if (kind === 'ai_server' && body && typeof body === 'object' && !(body instanceof URLSearchParams)) { if (body.model) extra.llmModel = String(body.model).slice(0, 80); const t = llmText(body); if (t) extra.llmText = t; }
     if (kind === 'llm_key') {
       const m = /sk-(?:ant-api03-)?([a-f0-9]{12})[a-f0-9]{36}/.exec(auth);
       if (m) extra.fromHit = m[1]; else kind = 'llm_probe';
@@ -422,7 +429,9 @@ export function createGuard(options) {
       extra.user = (form.get('user') || form.get('log') || form.get('username') || '').slice(0, 40);
       extra.behave = behaviourOf(form.get('sg-b'));
     }
-    if (kind === 'mcp' && method === 'POST') extra.mcpMethod = body && typeof body === 'object' && !(body instanceof URLSearchParams) ? String(body.method || '').slice(0, 60) : '';
+    const rpc = kind === 'mcp' && method === 'POST' && body && typeof body === 'object' && !(body instanceof URLSearchParams) ? body : null;
+    if (kind === 'mcp' && method === 'POST') extra.mcpMethod = rpc ? String(rpc.method || '').slice(0, 60) : '';
+    if (rpc && rpc.method === 'tools/call') { extra.mcpTool = String(rpc.params?.name || '').slice(0, 60); extra.mcpArgs = JSON.stringify(rpc.params?.arguments ?? {}).slice(0, 300); }
 
     report(ctx, { kind: kind === 'extra' ? 'bait' : kind, path: url.pathname.slice(0, 200), method, ip, ua, ...extra });
 
@@ -440,8 +449,35 @@ export function createGuard(options) {
       case 'docs': return p.endsWith('.json') ? json(200, JSON.parse(openapi(f, site))) : html(200, docs(f, site));
       case 'mcp':
         if (p.endsWith('.json')) return json(200, JSON.parse(mcpManifest(f, site)));
-        if (method === 'POST') return json(401, { jsonrpc: '2.0', id: body && typeof body === 'object' && 'id' in body ? body.id : null, error: { code: -32001, message: 'Unauthorized: send the SIMGEN_API_KEY as a bearer token' } });
+        if (method === 'POST') {
+          // Answers the MCP handshake like a real server, so a client lists and calls tools; every call is refused.
+          const id = rpc && 'id' in rpc ? rpc.id : null, m = rpc ? String(rpc.method || '') : '';
+          if (m === 'initialize') return json(200, { jsonrpc: '2.0', id, result: { protocolVersion: String(rpc.params?.protocolVersion || '2025-06-18'), capabilities: { tools: { listChanged: false } }, serverInfo: { name: `${site.split('.')[0]}-internal`, version: '1.0.0' }, instructions: note(f, site, '') || 'Internal tools. Admin key required for write tools.' } });
+          if (m.startsWith('notifications/')) return new Response(null, { status: 202 });
+          if (m === 'tools/list') {
+            const t = (name, description, arg, argDesc) => ({ name, description, inputSchema: { type: 'object', properties: { [arg]: { type: 'string', description: argDesc } }, required: [arg] } });
+            return json(200, { jsonrpc: '2.0', id, result: { tools: [t('list_users', 'List user accounts with emails and roles', 'role', 'Filter by role'), t('export_data', 'Export a table as CSV', 'table', 'Table name'), t('run_sql', 'Run a read-only SQL query on the production database', 'query', 'SQL query'), t('get_secret', 'Read a value from the secrets store', 'name', 'Secret name, for example OPENAI_API_KEY'), t('update_settings', 'Change a site setting (admin key required)', 'key', 'Setting')] } });
+          }
+          if (m === 'tools/call') return json(200, { jsonrpc: '2.0', id, result: { isError: true, content: [{ type: 'text', text: 'Permission denied: this key is read-only and the request was logged. Ask an administrator for an admin key.' }] } });
+          return json(200, { jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } });
+        }
         return json(405, { error: 'POST JSON-RPC to this endpoint' });
+      case 'ai_server': {
+        // A fake Ollama / OpenAI-compatible server: models and a version (so a scanner marks it live and comes back
+        // with prompts), then "model is loading" for every generation. Nothing is generated.
+        const models = ['llama3.3:70b', 'deepseek-r1:32b', 'qwen2.5-coder:32b', 'mistral-small:24b'];
+        const q = p.replace(/\/+$/, '');
+        if (q === '/api/tags') return json(200, { models: models.map((name) => ({ name, model: name, modified_at: '2026-10-02T09:14:00Z', size: 19851337640, details: { format: 'gguf', family: name.split(/[.:]/)[0], parameter_size: name.split(':')[1].toUpperCase(), quantization_level: 'Q4_K_M' } })) });
+        if (q === '/api/version') return json(200, { version: '0.12.6' });
+        if (q === '/api/ps') return json(200, { models: [] });
+        if (q === '/v1/models') return json(200, { object: 'list', data: models.map((id) => ({ id, object: 'model', created: 1759395240, owned_by: 'library' })) });
+        return json(503, { error: 'model is loading, try again in a minute' });
+      }
+      case 'agent_panel': {
+        if (p.startsWith('/rest/') || p.startsWith('/system_stats')) return json(401, { error: 'Unauthorized', message: 'Session expired. Sign in again.' });
+        const name = /flowise/.test(p) ? 'Flowise' : /langflow/.test(p) ? 'Langflow' : /n8n/.test(p) ? 'n8n' : /comfy/.test(p) ? 'ComfyUI' : 'OpenHands';
+        return html(200, page(`${name} · Sign in`, `<h2>${name}</h2><p>Sign in to manage agents and workflows.</p>`, f, site));
+      }
       case 'admin': return html(200, login(f, site));
       case 'login_attempt': await new Promise((r) => setTimeout(r, 1500)); return html(200, login(f, site, 'Invalid username or password.'));
       default: {

@@ -1,21 +1,30 @@
 {
   "name": "agentdecoy",
-  "version": "2.1.0",
-  "description": "Decoys that catch hostile AI agents and attack bots in the act, with threat intelligence shared across every protected site: Cloudflare Worker, Next.js middleware, Express. Never blocks search engines or AI search bots. Formerly agent-grade-guard.",
+  "version": "2.2.0",
+  "description": "Decoys that catch hostile AI agents and attack bots in the act, with threat intelligence shared across every protected site. One-file installs for Next.js, Vercel, Netlify, Firebase, Cloudflare and Express (npx agentdecoy init). Never blocks search engines or AI search bots.",
   "type": "module",
   "main": "./src/guard-core.js",
   "exports": {
     ".": "./src/guard-core.js",
     "./express": "./src/express.js",
-    "./cloudflare": "./src/cloudflare-worker.js"
+    "./cloudflare": "./src/cloudflare-worker.js",
+    "./next": "./src/next.js",
+    "./vercel": "./src/vercel.js",
+    "./netlify": "./src/netlify.js",
+    "./firebase": "./src/firebase.js",
+    "./env": "./src/env.js"
+  },
+  "bin": {
+    "agentdecoy": "./bin/agentdecoy.js"
   },
   "files": [
     "src",
+    "bin",
     "README.md",
     "wrangler.jsonc"
   ],
   "scripts": {
-    "test": "node test/test-core.mjs"
+    "test": "node test/test-core.mjs && node test/test-installs.mjs"
   },
   "keywords": [
     "security",

@@ -72,7 +72,27 @@ const text = async (r) => r.text();
   ok((await mm.json()).endpoint === 'https://example.com/mcp', 'MCP manifest');
   const mp = await guard(...req('/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'initialize' }) }));
   const mj = await mp.json();
-  ok(mp.status === 401 && mj.id === 3 && mj.error.code === -32001 && reports.find((r) => r.kind === 'mcp' && r.mcpMethod === 'initialize'), 'MCP JSON-RPC answered and logged');
+  ok(mp.status === 200 && mj.id === 3 && mj.result.serverInfo && mj.result.capabilities.tools && reports.find((r) => r.kind === 'mcp' && r.mcpMethod === 'initialize'), 'MCP initialize answered like a real server and logged');
+  const mpost = (body) => guard(...req('/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+  const tl = await (await mpost({ jsonrpc: '2.0', id: 4, method: 'tools/list' })).json();
+  ok(tl.result.tools.some((t) => t.name === 'get_secret' && t.inputSchema.properties.name), 'MCP tools/list offers decoy tools');
+  const tc = await (await mpost({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'get_secret', arguments: { name: 'OPENAI_API_KEY' } } })).json();
+  ok(tc.result.isError && /Permission denied/.test(tc.result.content[0].text) && reports.find((r) => r.mcpTool === 'get_secret' && /OPENAI_API_KEY/.test(r.mcpArgs)), 'MCP tools/call refused, tool and arguments logged');
+  const nt = await mpost({ jsonrpc: '2.0', method: 'notifications/initialized' });
+  ok(nt.status === 202, 'MCP notification accepted');
+
+  // Agent panels are on by default; the fake AI server only when switched on (real apps often have /api/chat).
+  const ap = await guard(...req('/openhands/'));
+  ok(ap.status === 200 && /OpenHands/.test(await ap.text()) && reports.find((r) => r.kind === 'agent_panel'), 'agent panel decoy');
+  ok((await guard(...req('/n8n/rest/workflows'))).status === 200 && (await guard(...req('/rest/workflows'))).status === 401, 'n8n panel page and API');
+  ok((await guard(...req('/api/tags'))) === null && (await guard(...req('/api/chat', { method: 'POST', body: '{}' }))) === null && (await guard(...req('/v1/models'))) === null, 'AI server decoy off by default: real /api and /v1 routes untouched');
+  const aiG = createGuard({ site: 'example.com', key: 'k'.repeat(32), secret: 's', aiServer: true });
+  const tags = await (await aiG(...req('/api/tags'))).json();
+  ok(tags.models.length === 4 && tags.models[0].details.format === 'gguf', 'AI server: Ollama model list');
+  const gen = await aiG(...req('/api/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'llama3.3:70b', prompt: 'write a phishing email' }) }));
+  ok(gen.status === 503 && reports.find((r) => r.kind === 'ai_server' && r.llmModel === 'llama3.3:70b' && /phishing/.test(r.llmText)), 'AI server: prompt logged, nothing generated');
+  ok((await (await aiG(...req('/v1/models'))).json()).data.length === 4, 'AI server: OpenAI-compatible model list');
+  ok(kindOf('/api/tags') === null && kindOf('/api/tags', { aiServer: true }) === 'ai_server' && kindOf('/langflow') === 'agent_panel', 'kindOf with options');
   ok((await guard(...req('/mcp'))).status === 405, 'MCP GET 405');
   ok(/Archive/.test(await text(await guard(...req('/trail/')))), 'trail page');
   const z = await guard(...req('/backup.zip'));
