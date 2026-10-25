@@ -60,7 +60,9 @@ if (deps.next) {
   const globRe = (g) => new RegExp('^' + g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*') + '$');
   const owned = hosting.rewrites.filter((r) => (r.function || r.run) && r.source && r.source !== '**' && r.source !== '/**').map((r) => globRe(r.source.replace(/^\/?/, '/')));
   const sample = (s) => s.replace(/\*\*/g, 'x/y').replace(/\*/g, 'x');
-  const skipped = FIREBASE_PATHS.filter((s) => owned.some((re) => re.test(sample(s))));
+  // A site that publishes its own MCP server keeps /mcp: MCP directories and real clients connect to it.
+  const ownMcp = hosting.public && fs.existsSync(path.join(cwd, hosting.public, '.well-known', 'mcp.json'));
+  const skipped = FIREBASE_PATHS.filter((s) => owned.some((re) => re.test(sample(s))) || (ownMcp && (s === '/mcp' || s === '/.well-known/mcp.json')));
   const add = FIREBASE_PATHS.filter((s) => !have.has(s) && !skipped.includes(s)).map((source) => ({ source, function: target }));
   if (skipped.length) console.log(`kept your own routes: skipped ${skipped.length} decoy path(s) your site already serves (${skipped.slice(0, 6).join(', ')}${skipped.length > 6 ? ', ...' : ''})`);
   hosting.rewrites = [...add, ...hosting.rewrites]; // decoys first, before any catch-all to index.html

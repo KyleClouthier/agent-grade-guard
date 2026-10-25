@@ -144,7 +144,9 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) !== realpath(__FILE__
 $agentdecoy_path = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $agentdecoy_kind = agentdecoy_kind($agentdecoy_path);
 // Search engines that say who they are never see a decoy.
-if ($agentdecoy_kind === null || preg_match('/googlebot|bingbot|applebot|duckduckbot|yandexbot|oai-searchbot|chatgpt-user|perplexitybot|claudebot|claude-searchbot/i', agentdecoy_ua())) {
+// MCP directories and monitors that name themselves are not attackers either: they list any MCP server they find.
+if ($agentdecoy_kind === null || preg_match('/googlebot|bingbot|applebot|duckduckbot|yandexbot|oai-searchbot|chatgpt-user|perplexitybot|claudebot|claude-searchbot/i', agentdecoy_ua())
+    || ($agentdecoy_kind === 'mcp' && preg_match('/mcpbeat|fixter(monitoring|\.dev)|clono|agentrankprobe|agenttrust|smithery|glama|pulsemcp|mcp\.so\b|mcpservers|mcp-?(registry|index|scan|monitor|crawler)/i', agentdecoy_ua()))) {
     http_response_code(404); header('Content-Type: text/plain; charset=utf-8'); exit("Not found\n");
 }
 if ($agentdecoy_kind === 'verify') { agentdecoy_report('bait', $agentdecoy_path); http_response_code(200); header('Content-Type: text/plain'); exit("SIMGEN_API_KEY=sgk_live_verify\n"); }

@@ -146,12 +146,9 @@ const text = async (r) => r.text();
   ok(lastCheck && lastCheck.via === 'flag' && lastCheck.signed === 'hello there' && lastCheck.ref === ftag, 'check-in reported with via, signature and ref', JSON.stringify(lastCheck));
   const env2 = await (await g2(...req('/.env', { ip: '198.51.100.71' }))).text();
   ok(env2.includes('EVAL_FLAG=/flag.txt'), 'bait .env points at the flag');
-  // Verified directory (1.2.0)
-  ok((await g2(...req('/.well-known/agent-grade.txt'))) === null, 'no ownership token unless the listing is on');
-  const g3 = createGuard({ site: 'example.com', key: 'j'.repeat(32), secret: 'test-secret', directory: true });
-  const wk = await g3(...req('/.well-known/agent-grade.txt'));
-  ok(wk && (await wk.text()).trim() === 'agv-0123456789abcdef01234567', 'ownership token served when the listing is on');
-  ok(configCalls.some((u) => u.includes('dir=1')) && configCalls.some((u) => u.includes('dir=0')), 'config request says whether the listing is on');
+  // The verified directory was removed (2.4.2): no ownership token is served and the config request has no dir flag.
+  ok((await g2(...req('/.well-known/agent-grade.txt'))) === null, 'no directory token (directory removed)');
+  ok(!configCalls.some((u) => u.includes('dir=')), 'config request has no directory flag');
   // Network list (1.3.0)
   const g4 = createGuard({ site: 'example.com', key: 'k'.repeat(32), secret: 'test-secret', blockKnown: true });
   const bad = await g4(new Request('https://example.com/contact', { method: 'POST', body: 'x=1', headers: { 'user-agent': 'curl/8' } }), { ip: '198.51.100.99' });

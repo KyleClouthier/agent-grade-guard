@@ -95,6 +95,14 @@ const req = (p, init = {}) => new Request('https://shop.example.com' + p, { head
   const rw3 = JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites;
   const decoys3 = rw3.filter((r) => r.function && r.function.functionId === 'agentdecoy').map((r) => r.source);
   ok(!decoys3.some((s) => s.startsWith('/api/') || s === '/admin') && decoys3.includes('**/.env') && /kept your own routes/.test(said3), 'init: decoys skip routes the site already serves', decoys3.filter((s) => s.startsWith('/api')).join(','));
+  d = tmp({ 'firebase.json': JSON.stringify({ hosting: { public: 'public', rewrites: [{ source: '**', destination: '/index.html' }] } }), 'public/.well-known/mcp.json': '{"name":"mine"}' });
+  run(d);
+  const rw4 = JSON.parse(fs.readFileSync(path.join(d, 'firebase.json'), 'utf8')).hosting.rewrites.map((r) => r.source);
+  ok(!rw4.includes('/mcp') && !rw4.includes('/.well-known/mcp.json') && rw4.includes('**/.env'), 'init: a site with its own MCP manifest keeps /mcp (2.4.2)');
+  const coreMod = await import('../src/guard-core.js');
+  const gm = coreMod.createGuard({ site: 'shop.example.com', key: 'k'.repeat(32), secret: 's' });
+  const idx = await gm(new Request('https://shop.example.com/mcp', { method: 'POST', headers: { 'user-agent': 'mcpbeat/0.1 (+https://mcpbeat.com/bot/; liveness check)', 'content-type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"initialize"}' }), { ip: '65.21.92.231', waitUntil() {} });
+  ok(idx && idx.status === 404, 'MCP directories get a plain 404 from the decoy MCP server (2.4.2)');
   ok(/invoker: 'public'/.test(fs.readFileSync(path.join(d, 'functions/index.js'), 'utf8')) && /--only functions:agentdecoy,hosting --force/.test(said3), 'init: public function and the exact deploy command');
   d = tmp({ 'package.json': JSON.stringify({ dependencies: { next: '15.0.0' } }), 'middleware.js': '// mine' });
   run(d); ok(fs.readFileSync(path.join(d, 'middleware.js'), 'utf8') === '// mine', 'init: never overwrites an existing middleware');

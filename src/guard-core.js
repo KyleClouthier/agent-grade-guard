@@ -14,7 +14,7 @@
  */
 
 const ENDPOINT = 'https://simgen.dev/api/agent-guard';
-export const VERSION = '2.4.1';
+export const VERSION = '2.4.2';
 const CONFIG_TTL = 12 * 3600 * 1000;
 
 // Built-in copy of the shared config (simgen.dev /api/agent-guard?config=1). The live one is fetched every 12 hours
@@ -31,6 +31,8 @@ export const SAFE_HEADERS = {
 
 // Pages where a known attacker is refused even on a plain visit (sign-in and checkout pages).
 export const LOGINISH = /^\/(wp-login\.php|login|signin|sign-in|log-in|account|checkout|cart|register|signup|sign-up|api\/auth|auth)(\/|$)/i;
+// MCP directories and uptime monitors (same list as the AgentDecoy server): not attackers, never shown a decoy.
+export const MCP_INDEXER = /mcpbeat|fixter(monitoring|\.dev)|clono|agentrankprobe|agenttrust|smithery|glama|pulsemcp|mcp\.so\b|mcpservers|mcp-?(registry|index|scan|monitor|crawler)/i;
 
 export const FLAG_PATHS =['/flag.txt', '/flag', '/.flag', '/flag.md', '/root/flag.txt'];
 export const DEFAULT_CONFIG = {
@@ -346,7 +348,7 @@ export function createGuard(options) {
     if (options.remoteConfig === false || Date.now() - cfgAt < CONFIG_TTL) return cfg;
     if (!cfgLoading) cfgLoading = (async () => {
       try {
-        const u = endpoint + '?config=1&v=js-' + VERSION + (key ? '&key=' + encodeURIComponent(key) + '&dir=' + (options.directory ? '1' : '0') : '');
+        const u = endpoint + '?config=1&v=js-' + VERSION + (key ? '&key=' + encodeURIComponent(key) : '');
         const r = await fetch(u, AbortSignal.timeout ? { signal: AbortSignal.timeout(2500) } : {});
         if (r.ok) {
           const j = await r.json();
@@ -399,13 +401,14 @@ export function createGuard(options) {
         return new Response('Refused: this address used stolen credentials on a site protected by AgentDecoy Guard. If this is a mistake: https://simgen.dev/agentdecoy/unlist/', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
       }
     }
-    // The verified directory (opt-in): the ownership token AgentDecoy checks once a day.
-    if (url.pathname === '/.well-known/agent-grade.txt') return options.directory && c.directoryToken ? text(String(c.directoryToken).replace(/[^a-z0-9-]/g, '') + String.fromCharCode(10)) : null;
     let kind = kindWith(c, url.pathname);
     if (!kind) return null;
     const ip = String(ctx.ip || request.headers.get('cf-connecting-ip') || (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || '').slice(0, 64);
     const ua = (request.headers.get('user-agent') || '').slice(0, 300);
     const method = request.method.toUpperCase();
+    // MCP directories and uptime monitors that name themselves list any MCP server they find. A plain 404, so a
+    // decoy never shows up in a directory as the site's server (and they are not attackers).
+    if (kind === 'mcp' && MCP_INDEXER.test(ua)) return notFound();
     const extra = {};
     if (KINDS_WITH_BOT_CHECK.has(kind)) {
       const bot = await botCheck(ip, ua, ctx.verifiedBot);
