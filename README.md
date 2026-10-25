@@ -153,7 +153,7 @@ GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&list=1      -> { list: ["203
 GET https://simgen.dev/api/agent-guard?key=YOUR_KEY&intel=ip1,ip2 -> where those addresses were seen elsewhere
 ```
 
-Guard does this for you by default (since 2.3.0). The list holds addresses that used a stolen decoy secret (14 days), plus watched cloud and hosting servers that took decoy secrets and came back with a second tool, or raided several sites (7 days). Listed addresses get a 403 on logins, sign-ups, checkouts and any form post, while they can still read your pages. The list is refreshed hourly. Ordinary page views are never blocked, and verified search and AI crawlers are never on the list. To turn it off: blockKnown: false (one-file installs: AGENTDECOY_BLOCK=off; Cloudflare: BLOCK_KNOWN = "off"; Next.js template: AGENT_GRADE_BLOCK_KNOWN=off).
+Guard does this for you by default (since 2.3.0). The list holds addresses that used a stolen decoy secret (14 days), plus watched cloud and hosting servers that took decoy secrets with a second tool or by the dozen, or raided several sites (7 days). Listed addresses get a 403 on logins, sign-ups, checkouts and any form post, while they can still read your pages. The list is refreshed hourly. Ordinary page views are never blocked, and verified search and AI crawlers are never on the list. To turn it off: blockKnown: false (one-file installs: AGENTDECOY_BLOCK=off; Cloudflare: BLOCK_KNOWN = "off"; Next.js template: AGENT_GRADE_BLOCK_KNOWN=off).
 
 ## Optional security headers
 

@@ -1,6 +1,6 @@
 {
   "name": "agentdecoy",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Security for the AI-agent era: decoys that catch hostile AI agents (fake keys, AI tool configs, MCP and AI servers, agent panels) and a shared network that locks them out. One-file installs for Next.js, Vercel, Netlify, Firebase, Cloudflare and Express (npx agentdecoy init). Never blocks search engines.",
   "type": "module",
   "main": "./src/guard-core.js",
