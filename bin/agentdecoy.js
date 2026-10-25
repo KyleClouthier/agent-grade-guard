@@ -55,28 +55,37 @@ if (deps.next) {
   // Use the region the project's functions already run in (Hosting assumes us-central1 when none is given).
   const region = (hosting.rewrites.find((r) => r.function && typeof r.function === 'object' && r.function.region) || {}).function?.region || '';
   const target = region ? { functionId: 'agentdecoy', region } : { functionId: 'agentdecoy' };
-  const add = FIREBASE_PATHS.filter((s) => !have.has(s)).map((source) => ({ source, function: target }));
+  // Never put a decoy in front of a route the site already sends to its own function or Cloud Run service (for
+  // example /api/** or /admin): those stay the site's. Static catch-alls (** to index.html) do not count.
+  const globRe = (g) => new RegExp('^' + g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*') + '$');
+  const owned = hosting.rewrites.filter((r) => (r.function || r.run) && r.source && r.source !== '**' && r.source !== '/**').map((r) => globRe(r.source.replace(/^\/?/, '/')));
+  const sample = (s) => s.replace(/\*\*/g, 'x/y').replace(/\*/g, 'x');
+  const skipped = FIREBASE_PATHS.filter((s) => owned.some((re) => re.test(sample(s))));
+  const add = FIREBASE_PATHS.filter((s) => !have.has(s) && !skipped.includes(s)).map((source) => ({ source, function: target }));
+  if (skipped.length) console.log(`kept your own routes: skipped ${skipped.length} decoy path(s) your site already serves (${skipped.slice(0, 6).join(', ')}${skipped.length > 6 ? ', ...' : ''})`);
   hosting.rewrites = [...add, ...hosting.rewrites]; // decoys first, before any catch-all to index.html
   const fnDir = (fb.functions && (Array.isArray(fb.functions) ? fb.functions[0] : fb.functions).source) || 'functions';
   // A static site with no functions yet: make a minimal functions folder that holds only the decoys.
   if (!fs.existsSync(path.join(cwd, fnDir))) {
     if (!fb.functions) fb.functions = { source: fnDir };
     write(`${fnDir}/package.json`, JSON.stringify({ name: 'agentdecoy-functions', private: true, main: 'index.js', engines: { node: '20' }, dependencies: { 'firebase-functions': '^6', 'firebase-admin': '^12', agentdecoy: '^2' } }, null, 2) + '\n');
-    write(`${fnDir}/index.js`, `// AgentDecoy decoys for this site (npx agentdecoy init). Your key goes in ${fnDir}/.env as AGENTDECOY_KEY=...\nconst { onRequest } = require('firebase-functions/v2/https');\nexports.agentdecoy = onRequest({ region: '${region || 'us-central1'}' }, require('agentdecoy/firebase').handler());\n`);
+    // invoker 'public': Hosting can reach the function without a separate access step (a first deploy that
+    // skips it answers 403).
+    write(`${fnDir}/index.js`, `// AgentDecoy decoys for this site (npx agentdecoy init). Your key goes in ${fnDir}/.env as AGENTDECOY_KEY=...\nconst { onRequest } = require('firebase-functions/v2/https');\nexports.agentdecoy = onRequest({ region: '${region || 'us-central1'}', invoker: 'public' }, require('agentdecoy/firebase').handler());\n`);
     write(`${fnDir}/.gitignore`, 'node_modules/\n.env\n');
     fs.writeFileSync(path.join(cwd, 'firebase.json'), JSON.stringify(fb, null, 2) + '\n');
     console.log(`added ${add.length} decoy rewrites to firebase.json and a new ${fnDir}/ folder with the decoy function`);
-    console.log(`\nFirebase: next, run  cd ${fnDir} && npm install . Get your free key at https://simgen.dev/agentdecoy and put it in ${fnDir}/.env as AGENTDECOY_KEY=... then firebase deploy.\nNeeds the Blaze plan, like any Cloud Function.`);
+    console.log(`\nFirebase, next:\n  1. cd ${fnDir} && npm install\n  2. Get your free key at https://simgen.dev/agentdecoy and put it in ${fnDir}/.env as AGENTDECOY_KEY=...\n  3. firebase deploy --only functions:agentdecoy,hosting --force\n     (--force lets Firebase set up the 7-day image cleanup it asks for. Needs the Blaze plan, like any Cloud Function.)\n  4. Press Verify in your AgentDecoy dashboard. If it says an API is disabled, open the link in the error and enable it.`);
     process.exit(0);
   }
   fs.writeFileSync(path.join(cwd, 'firebase.json'), JSON.stringify(fb, null, 2) + '\n');
   console.log(`added ${add.length} decoy rewrites to firebase.json${region ? ` (region ${region}, same as your functions)` : ''}`);
   const ts = fs.existsSync(path.join(cwd, fnDir, 'src', 'index.ts'));
-  const opts = `{ region: '${region || 'us-central1'}' }, `;
+  const opts = `{ region: '${region || 'us-central1'}', invoker: 'public' }, `;
   const line = ts
     ? `  import { onRequest } from 'firebase-functions/v2/https';\n  // eslint-disable-next-line @typescript-eslint/no-require-imports\n  export const agentdecoy = onRequest(${opts}require('agentdecoy/firebase').handler());`
     : `  const { onRequest } = require('firebase-functions/v2/https');\n  exports.agentdecoy = onRequest(${opts}require('agentdecoy/firebase').handler());`;
-  console.log(`\nFirebase: run npm install agentdecoy in ${fnDir}, then add this to ${fnDir}/${ts ? 'src/index.ts' : 'index.js'}:\n\n${line}\n\n${KEY_HELP}: as an environment variable for the function (${fnDir}/.env: AGENTDECOY_KEY=...) or a secret, then firebase deploy.\nNeeds the Blaze plan, like any Cloud Function.`);
+  console.log(`\nFirebase: run npm install agentdecoy in ${fnDir}, then add this to ${fnDir}/${ts ? 'src/index.ts' : 'index.js'}:\n\n${line}\n\n${KEY_HELP}: as an environment variable for the function (${fnDir}/.env: AGENTDECOY_KEY=...) or a secret, then:\n\n  firebase deploy --only functions:agentdecoy,hosting --force\n\n(--force lets Firebase set up the image cleanup it asks for. Needs the Blaze plan, like any Cloud Function.) Then press Verify in your AgentDecoy dashboard.`);
 } else if (exists('vercel.json') || exists('.vercel')) {
   write(`middleware.${ext}`, "export { default } from 'agentdecoy/vercel';\n");
   console.log(`\nVercel: done. ${KEY_HELP} under Project Settings > Environment Variables, then redeploy.`);
