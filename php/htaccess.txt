@@ -1,0 +1,5 @@
+# AgentDecoy: send the addresses attackers ask for to agentdecoy.php (put these lines at the top of .htaccess).
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^(\.env.*|\.git/(HEAD|config)|\.aws/credentials|\.cursor/mcp\.json|\.mcp\.json|\.vscode/mcp\.json|\.claude/settings(\.local)?\.json|wp-config\.php\..+|config\.php\.bak|phpinfo\.php|info\.php|[^/]+\.sql|backup\.zip|site-backup\.zip|www\.zip|\.well-known/mcp\.json|mcp|openapi\.json|swagger\.json|api/docs|admin(/.*)?|administrator(/.*)?|flag\.txt|llm/.*)$ agentdecoy.php [L,QSA,NC]
+</IfModule>

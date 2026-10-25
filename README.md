@@ -31,6 +31,7 @@ npx agentdecoy init
 | Next.js 16 | `proxy.ts` at the root (or in `src/`) | `export { proxy } from 'agentdecoy/next';` |
 | Any other framework on Vercel (Vite, React, Astro, SvelteKit) | `middleware.ts` at the root | `export { default } from 'agentdecoy/vercel';` |
 | Netlify (Bolt, Lovable exports, Vite) | `netlify/edge-functions/agentdecoy.ts` | `export { default } from 'agentdecoy/netlify';` plus `export const config = { path: '/*' };` |
+| PHP, cPanel, Apache (not WordPress) | one file and a few .htaccess lines | see [php/](php/) |
 | Firebase Hosting | a function and rewrites | run `npx agentdecoy init` (needs the Blaze plan). A static site with no functions yet gets a ready `functions/` folder |
 | Express, Replit, Render, Railway, Fly | your server file | `app.use(agentGradeGuard({ site, key: process.env.AGENTDECOY_KEY }))` from `agentdecoy/express` |
 | Shopify, Wix, Squarespace on Cloudflare | a Cloudflare Worker | see below |
