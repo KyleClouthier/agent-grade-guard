@@ -1,6 +1,6 @@
 # AgentDecoy
 
-**Full-spectrum protection and threat intelligence against hostile AI agents, built on a network of decoys.**
+**Security for the AI-agent era: decoys that catch hostile AI agents, and a shared network that locks them out.**
 
 ![AgentDecoy: scan, catch, identify, shut out](https://raw.githubusercontent.com/KyleClouthier/agentdecoy/main/docs/agentdecoy-how-it-works.png)
 
