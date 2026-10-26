@@ -1,3 +1,5 @@
+<img src="https://simgen.dev/agentdecoy/logo.svg" width="72" height="72" alt="AgentDecoy logo">
+
 # AgentDecoy
 
 [![npm](https://img.shields.io/npm/v/agentdecoy?color=d4a017)](https://www.npmjs.com/package/agentdecoy) [![downloads](https://img.shields.io/npm/dm/agentdecoy?color=d4a017)](https://www.npmjs.com/package/agentdecoy) [![GitHub Action](https://img.shields.io/badge/GitHub%20Action-AgentDecoy%20scan-d4a017)](https://github.com/marketplace/actions/agentdecoy-scan) [![sites protected](https://img.shields.io/badge/live%20catches-simgen.dev%2Fagentdecoy-red)](https://simgen.dev/agentdecoy/#live)
