@@ -5,6 +5,10 @@
 **Security for the AI-agent era: decoys that catch hostile AI agents, and a shared network that locks them out.**
 
 > **Live experiment:** I leaked fake AI keys on purpose. A public Gist key was used after **3 seconds**, a GitHub repo key after **15 seconds**, a Hugging Face Space key in under 2 minutes, and the thieves tried gpt-4o, gpt-3.5 and even Claude on them. [See the live Leak Clock](https://simgen.dev/agentdecoy/leak-clock/). If AgentDecoy is useful to you, a star helps others find it.
+>
+> **And an AI agent obeyed a hidden note.** A decoy page carries a line only AI agents read, asking them to check in with a code. 61 minutes after something opened the page, a different address dressed as an iPhone came back with the exact code. If an agent follows a harmless note, it will follow a harmful one.
+
+**Run the experiment yourself in 2 minutes:** make a free [tripwire](https://simgen.dev/agentdecoy/tripwires/) (a fake OpenAI key, a fake MCP server entry or a check-in note), put it in a public repo, Gist or doc, and get an email the moment something uses it. Then tell us how fast yours was found.
 
 What makes it different: decoys for what AI agents hunt now (a fake MCP server, fake AI coding-tool configs, fake AI keys), every stolen key traced to the visit it was taken on, every catch labelled script, person or AI agent, and an address caught on one site locked out of every protected site within the hour. Plus free [tripwires](https://simgen.dev/agentdecoy/tripwires/) you plant in repos and docs: a fake OpenAI key or a fake MCP server entry that emails you the moment it is used. Live catches from every protected site: [simgen.dev/agentdecoy](https://simgen.dev/agentdecoy/#live).
 
